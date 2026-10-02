@@ -21,6 +21,8 @@ import duckdb
 import numpy as np
 import pandas as pd
 
+from delay_contagion.warehouse import fetch_one
+
 TAU_GRID = np.arange(0, 121)  # minutes
 # Analysis window on delays: drops data errors and the extreme tail (> 10 h) that would
 # dominate least squares without telling us anything about turn dynamics.
@@ -130,6 +132,9 @@ def fit_with_bootstrap(
     `stats` has shape (days, taus, 6) for one group.
     """
     point = solve(stats.sum(0))
+    # Same model with tau pinned at 0 (delay passes once the scheduled turn is used up): a
+    # baseline that shows what the estimated minimum turn time adds.
+    zero = solve(stats.sum(0)[:1], TAU_GRID[:1])
     rng = np.random.default_rng(seed)
     n_days = stats.shape[0]
     draws = np.empty((n_boot, 3))
@@ -143,6 +148,7 @@ def fit_with_bootstrap(
         "a": point.a, "a_lo": lo[0], "a_hi": hi[0],
         "beta": point.beta, "beta_lo": lo[1], "beta_hi": hi[1],
         "tau": point.tau, "tau_lo": lo[2], "tau_hi": hi[2],
+        "a_tau0": zero.a, "beta_tau0": zero.beta,
     }  # fmt: skip
 
 
@@ -152,56 +158,111 @@ def fit_groups(
     months: list[str],
     groups: list[str] | None = None,
     n_boot: int = 300,
+    seed: int = 0,
 ) -> pd.DataFrame:
     keys, _, arr = daily_stats(con, group_col, months, groups)
-    rows = [{"group": k, **fit_with_bootstrap(arr[i], n_boot=n_boot)} for i, k in enumerate(keys)]
+    rows = [
+        {"group": k, **fit_with_bootstrap(arr[i], n_boot=n_boot, seed=seed + i)}
+        for i, k in enumerate(keys)
+    ]
     return pd.DataFrame(rows)
 
 
-def holdout_scores(
-    con: duckdb.DuckDBPyConnection,
-    params: pd.DataFrame,
-    group_col: str,
-    train_months: list[str],
-    test_months: list[str],
-) -> pd.DataFrame:
-    """Out-of-sample MAE/RMSE of the hinge model against two baselines fitted on train:
-    a constant (group mean) and a linear-in-inbound-delay model ignoring slack."""
-    con.register("hinge_params", params[["group", "a", "beta", "tau"]])
-    train = ", ".join(f"'{m}'" for m in train_months)
-    test = ", ".join(f"'{m}'" for m in test_months)
-    out = con.execute(
+def load_turns(con: duckdb.DuckDBPyConnection, months: list[str]) -> pd.DataFrame:
+    """Turns of `months` inside the analysis window, with the features the baselines use."""
+    month_list = ", ".join(f"'{m}'" for m in months)
+    return con.execute(
         f"""
-        with base as (
-            select {group_col} as g, flight_month, inbound_arr_delay as i, sched_turn_min as s,
-                   outbound_dep_delay as y
-            from marts.fct_turns where {DELAY_FILTER}
-        ),
-        lin as (
-            select g, avg(y) as mean_y, regr_slope(y, i) as b1, regr_intercept(y, i) as b0
-            from base where flight_month in ({train}) group by g
-        ),
-        pred as (
-            select b.g, b.y,
-                   l.mean_y                                          as p_const,
-                   l.b0 + l.b1 * b.i                                 as p_linear,
-                   h.a + h.beta * greatest(0, b.i - (b.s - h.tau))   as p_hinge
-            from base b
-            join lin l using (g)
-            join hinge_params h on h."group" = b.g
-            where b.flight_month in ({test})
-        )
-        select g as "group", count(*) as n_test,
-               avg(abs(y - p_const))  as mae_constant,
-               avg(abs(y - p_linear)) as mae_linear,
-               avg(abs(y - p_hinge))  as mae_hinge,
-               sqrt(avg((y - p_const)  ^ 2)) as rmse_constant,
-               sqrt(avg((y - p_linear) ^ 2)) as rmse_linear,
-               sqrt(avg((y - p_hinge)  ^ 2)) as rmse_hinge,
-               1 - avg((y - p_hinge) ^ 2) / avg((y - p_const) ^ 2) as r2_hinge,
-               1 - avg((y - p_linear) ^ 2) / avg((y - p_const) ^ 2) as r2_linear
-        from pred group by g order by g
+        select carrier, station, flight_month, dep_hour_local as hour,
+               inbound_arr_delay::double as i, sched_turn_min::double as s,
+               outbound_dep_delay::double as y
+        from marts.fct_turns
+        where flight_month in ({month_list}) and {DELAY_FILTER}
         """
     ).df()
-    con.unregister("hinge_params")
-    return out
+
+
+def filter_excluded_share(con: duckdb.DuckDBPyConnection, months: list[str]) -> float:
+    """Share of turns (with both delays reported) that the analysis window drops."""
+    month_list = ", ".join(f"'{m}'" for m in months)
+    return float(
+        fetch_one(
+            con,
+            f"""
+            select 1 - count(*) filter (where {DELAY_FILTER}) / count(*)
+            from marts.fct_turns
+            where flight_month in ({month_list})
+              and inbound_arr_delay is not null and outbound_dep_delay is not null
+            """,
+        )[0]
+    )
+
+
+GBM_FEATURES = ["i", "s", "carrier", "hour"]
+
+
+def gbm_predictions(train: pd.DataFrame, test: pd.DataFrame, seed: int = 0) -> np.ndarray:
+    """A pooled gradient-boosted model on (inbound delay, scheduled turn, carrier, hour).
+
+    The flexible benchmark: if it beats the hinge, the hinge is kept for what it gives the
+    decision layer (two interpretable parameters and a recursion that stays linear).
+    """
+    import lightgbm as lgb
+
+    def features(df: pd.DataFrame) -> pd.DataFrame:
+        x = df[GBM_FEATURES].copy()
+        x["carrier"] = pd.Categorical(x["carrier"], categories=sorted(train["carrier"].unique()))
+        return x
+
+    params = {
+        "objective": "regression",
+        "learning_rate": 0.1,
+        "num_leaves": 63,
+        "min_data_in_leaf": 200,
+        "bagging_fraction": 0.5,
+        "bagging_freq": 1,
+        "num_threads": 3,
+        "seed": seed,
+        "deterministic": True,
+        "verbose": -1,
+    }
+    data = lgb.Dataset(features(train), train["y"], categorical_feature=["carrier"])
+    model = lgb.train(params, data, num_boost_round=300)
+    return np.asarray(model.predict(features(test)))
+
+
+def _ols(df: pd.DataFrame, cols: list[str]) -> np.ndarray:
+    x = np.column_stack([np.ones(len(df)), *(df[c].to_numpy() for c in cols)])
+    return np.linalg.lstsq(x, df["y"].to_numpy(), rcond=None)[0]
+
+
+def holdout_scores(
+    params: pd.DataFrame, group_col: str, train: pd.DataFrame, test: pd.DataFrame
+) -> pd.DataFrame:
+    """Out-of-sample MAE/RMSE of the hinge against baselines fitted on the same train turns.
+
+    constant: group mean. linear: in inbound delay, ignoring slack. linear_slack: in inbound
+    delay and scheduled turn. hinge_tau0: the hinge with tau pinned at 0. gbm: the pooled
+    boosted model (column `p_gbm` of `test`). hinge: the fitted model.
+    """
+    rows = []
+    for g, p in params.set_index("group").iterrows():
+        tr, te = train[train[group_col] == g], test[test[group_col] == g]
+        if te.empty:  # e.g. a carrier that stopped reporting before the test months
+            continue
+        b_lin, b_ls = _ols(tr, ["i"]), _ols(tr, ["i", "s"])
+        i, s, y = te["i"].to_numpy(), te["s"].to_numpy(), te["y"].to_numpy()
+        preds = {
+            "constant": np.full(len(te), tr["y"].mean()),
+            "linear": b_lin[0] + b_lin[1] * i,
+            "linear_slack": b_ls[0] + b_ls[1] * i + b_ls[2] * s,
+            "hinge_tau0": p["a_tau0"] + p["beta_tau0"] * hinge_x(i, s, 0.0),
+            "gbm": te["p_gbm"].to_numpy(),
+            "hinge": p["a"] + p["beta"] * hinge_x(i, s, p["tau"]),
+        }
+        row: dict[str, object] = {"group": g, "n_test": len(te)}
+        for m, pred in preds.items():
+            row[f"mae_{m}"] = float(np.abs(y - pred).mean())
+            row[f"rmse_{m}"] = float(np.sqrt(((y - pred) ** 2).mean()))
+        rows.append(row)
+    return pd.DataFrame(rows)
