@@ -3,15 +3,19 @@
     "n_test_months": 3,
     "n_hub_airports": 15,
     "lp_carrier": "WN",
-    "lp_scenarios": 90,
+    "lp_scenarios": null,
+    "lp_solver": "ipm",
     "lp_scenario_sizes": [
       10,
       30,
       60,
-      90
+      90,
+      150,
+      210
     ],
     "lp_size_replicates": 3,
     "lp_b_max": 20.0,
+    "lp_round_step": 5.0,
     "lp_budgets": [
       0,
       150,
@@ -23,15 +27,22 @@
       2400
     ],
     "lp_reference_budget": 600,
+    "sens_tau_offsets": [
+      -10,
+      -5,
+      5,
+      10
+    ],
+    "sens_beta": 0.8,
     "min_events_airport": 1500,
     "n_boot": 300,
     "seed": 2026
   },
   "network": {
     "flights": 7043857,
-    "operated_legs_in_chains": 6915291,
-    "turns": 5023123,
-    "chains_with_turns": 1466896,
+    "operated_legs_in_chains": 6915302,
+    "turns": 5023134,
+    "chains_with_turns": 1466894,
     "first_month": "2025-08",
     "last_month": "2026-07",
     "reactionary_share": 0.397426,
@@ -54,20 +65,49 @@
       "2026-06",
       "2026-07"
     ],
-    "turns_train": 3659069,
+    "turns_train": 3659080,
     "turns_test": 1334033,
+    "test_filter_excluded_share": 0.001261,
     "mae": {
-      "constant": 22.504263,
-      "linear": 14.672381,
-      "hinge": 11.673376
+      "constant": 22.50425,
+      "linear": 14.672377,
+      "linear_slack": 14.649855,
+      "hinge_tau0": 16.799709,
+      "gbm": 11.227621,
+      "hinge": 11.673371
     },
     "rmse": {
-      "constant": 41.28373,
-      "linear": 30.583125,
-      "hinge": 27.691134
+      "constant": 41.283733,
+      "linear": 30.583127,
+      "linear_slack": 30.025578,
+      "hinge_tau0": 31.174709,
+      "gbm": 27.368955,
+      "hinge": 27.691135
     },
     "carriers_hinge_beats_linear_mae": 13,
+    "carriers_hinge_beats_linear_slack_mae": 13,
+    "carriers_hinge_beats_gbm_mae": 1,
     "n_carriers": 13,
+    "carriers_without_test": [
+      "HA"
+    ],
+    "hubs": [
+      "ORD",
+      "DEN",
+      "ATL",
+      "DFW",
+      "PHX",
+      "CLT",
+      "LAS",
+      "LAX",
+      "SEA",
+      "MCO",
+      "DCA",
+      "SFO",
+      "LGA",
+      "BOS",
+      "SLC"
+    ],
     "tau_range": [
       39.0,
       63.0
@@ -78,69 +118,117 @@
     ]
   },
   "contagion": {
-    "matched_events": 3848918,
+    "matched_events": 3848925,
     "overall": {
-      "multiplier": 0.980545,
-      "multiplier_lo": 0.958198,
-      "multiplier_hi": 1.004966,
+      "multiplier": 0.980548,
+      "multiplier_lo": 0.960224,
+      "multiplier_hi": 1.00519,
       "n_events": 396690,
       "primary_min": 24204798.0,
-      "excess_min": 23733883.940888
+      "excess_min": 23733959.435106
+    },
+    "late_aircraft_coded": {
+      "events": 396690,
+      "share_events": 0.192473,
+      "share_primary_min": 0.282687
     },
     "n_airports_ranked": 49
   },
   "buffer": {
     "carrier": "WN",
     "tau": 48.0,
-    "beta": 0.9837,
+    "beta": 0.983705,
     "b_max": 20.0,
-    "scenario_days": 90,
+    "scenario_days": 273,
+    "train_days_available": 273,
     "test_days": 92,
-    "lp_rows": 604913,
-    "lp_cols": 606427,
-    "cells": 1515,
-    "turns_per_day_train": 2971.666667,
+    "test_weeks": 14,
+    "lp_rows": 1811979,
+    "lp_cols": 1813543,
+    "cells": 1565,
+    "turns_per_day_train": 2930.014652,
+    "turns_per_day_test": 3140.847826,
     "baseline_delay_per_day_test": 71581.478261,
     "reference_budget": 600,
+    "uniform_at_lp_spend": 649.423595,
     "reference": {
       "LP-optimised": {
-        "avoided_test": 1047.744203,
-        "avoided_test_lo": 981.265531,
-        "avoided_test_hi": 1115.774709,
-        "gain_vs_uniform": 473.678402,
-        "gain_vs_uniform_lo": 437.329299,
-        "gain_vs_uniform_hi": 510.546114,
-        "avoided_train": 650.125699,
-        "buffer_test": 692.67651,
+        "avoided_test": 1092.6166,
+        "avoided_test_lo": 1015.215372,
+        "avoided_test_hi": 1169.428344,
+        "gain_vs_uniform": 510.342256,
+        "gain_vs_uniform_lo": 482.206836,
+        "gain_vs_uniform_hi": 539.427806,
+        "avoided_train": 616.336876,
+        "buffer_test": 717.671315,
         "buffer_train": 600.0,
-        "cells_padded": 177,
-        "avoided_per_buffer_min": 1.512602
+        "cells_padded": 185,
+        "avoided_per_buffer_min": 1.522447
+      },
+      "LP, 5-min steps": {
+        "avoided_test": 925.699137,
+        "avoided_test_lo": 862.925376,
+        "avoided_test_hi": 987.032974,
+        "gain_vs_uniform": 343.424793,
+        "gain_vs_uniform_lo": 317.419786,
+        "gain_vs_uniform_hi": 370.145147,
+        "avoided_train": 515.045456,
+        "buffer_test": 611.413043,
+        "buffer_train": 496.391941,
+        "cells_padded": 98,
+        "avoided_per_buffer_min": 1.514032
+      },
+      "Marginal greedy": {
+        "avoided_test": 982.114797,
+        "avoided_test_lo": 899.236622,
+        "avoided_test_hi": 1068.024783,
+        "gain_vs_uniform": 399.840453,
+        "gain_vs_uniform_lo": 364.3871,
+        "gain_vs_uniform_hi": 436.282901,
+        "avoided_train": 534.757291,
+        "buffer_test": 743.143041,
+        "buffer_train": 600.0,
+        "cells_padded": 59,
+        "avoided_per_buffer_min": 1.321569
+      },
+      "Greedy": {
+        "avoided_test": 473.489895,
+        "avoided_test_lo": 406.861422,
+        "avoided_test_hi": 542.162166,
+        "gain_vs_uniform": -108.784449,
+        "gain_vs_uniform_lo": -128.801598,
+        "gain_vs_uniform_hi": -88.957524,
+        "avoided_train": 311.775014,
+        "buffer_test": 758.333114,
+        "buffer_train": 600.0,
+        "cells_padded": 63,
+        "avoided_per_buffer_min": 0.624382
       },
       "Uniform": {
-        "avoided_test": 574.065801,
-        "avoided_test_lo": 534.628566,
-        "avoided_test_hi": 615.829304,
+        "avoided_test": 582.274344,
+        "avoided_test_lo": 519.848315,
+        "avoided_test_hi": 643.601411,
         "gain_vs_uniform": 0.0,
         "gain_vs_uniform_lo": 0.0,
         "gain_vs_uniform_hi": 0.0,
-        "avoided_train": 353.170098,
-        "buffer_test": 633.932795,
+        "avoided_train": 353.247046,
+        "buffer_test": 643.173813,
         "buffer_train": 600.0,
-        "cells_padded": 1515,
-        "avoided_per_buffer_min": 0.905563
+        "cells_padded": 1565,
+        "avoided_per_buffer_min": 0.905314
       },
-      "Greedy": {
-        "avoided_test": 515.736036,
-        "avoided_test_lo": 466.226589,
-        "avoided_test_hi": 566.769416,
-        "gain_vs_uniform": -58.329765,
-        "gain_vs_uniform_lo": -82.797841,
-        "gain_vs_uniform_hi": -33.288586,
-        "avoided_train": 336.928213,
-        "buffer_test": 688.913043,
+      "Uniform, 5-min steps": {
+        "avoided_test": 538.091028,
+        "avoided_test_lo": 482.044894,
+        "avoided_test_hi": 594.125189,
+        "gain_vs_uniform": -44.183316,
+        "gain_vs_uniform_lo": -60.115349,
+        "gain_vs_uniform_hi": -28.424731,
+        "avoided_train": 318.628337,
+        "buffer_test": 659.456522,
         "buffer_train": 600.0,
-        "cells_padded": 60,
-        "avoided_per_buffer_min": 0.748623
+        "cells_padded": 81,
+        "avoided_per_buffer_min": 0.815961
       }
     }
   }

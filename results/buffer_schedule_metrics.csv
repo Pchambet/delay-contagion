@@ -1,0 +1,8 @@
+policy,ontime15,ontime15_clock,clock_late_per_day,clock_late_change_per_day
+No buffer,0.6917,0.6917,71581.4783,0.0
+LP-optimised,0.6962,0.6879,72332.6309,751.1527
+"LP, 5-min steps",0.6952,0.6883,72253.2699,671.7916
+Marginal greedy,0.6952,0.6862,72588.1618,1006.6836
+Greedy,0.6936,0.6888,72070.4085,488.9303
+Uniform,0.6983,0.6904,72331.8657,750.3874
+"Uniform, 5-min steps",0.6943,0.6873,72419.8925,838.4142

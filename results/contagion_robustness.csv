@@ -1,0 +1,5 @@
+variant,n_events,multiplier,multiplier_lo,multiplier_hi,small_slip_multiplier,small_slip_lo,small_slip_hi
+Headline: carrier x day x part of day x legs left (4+),396690,0.9805,0.9602,1.0052,1.2178,1.1582,1.2891
++ origin airport in the match,159615,0.9519,0.9341,0.9716,1.019,0.9423,1.1089
+Exact legs left (no 4+ cap),381386,0.9829,0.9626,1.0075,1.1683,1.1087,1.2372
+Without legs that carry a late-aircraft code,320338,0.9919,0.9682,1.02,1.19,1.1317,1.2617
