@@ -2,7 +2,8 @@
 
 Whole tails are sampled (every leg they flew on the chosen days, cancellations included) so
 that rotation chaining is exercised exactly as on the full data. The sample is
-deterministic (hash of the tail number) so regenerating it yields the same file.
+deterministic (md5 of the tail number, stable across DuckDB versions, unlike `hash()`), so
+regenerating it yields the same file.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ def write() -> int:
                 from (select distinct Reporting_Airline, Tail_Number from f
                       where Tail_Number is not null)
                 qualify row_number() over (
-                    partition by Reporting_Airline order by hash(Tail_Number)
+                    partition by Reporting_Airline order by md5(Tail_Number)
                 ) <= {TAILS_PER_CARRIER}
             )
             select f.* from f join tails using (Reporting_Airline, Tail_Number)

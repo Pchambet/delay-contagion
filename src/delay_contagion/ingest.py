@@ -68,12 +68,16 @@ def previous(month: Month) -> Month:
 
 
 def _exists(month: Month, timeout: float = 30.0) -> bool:
+    """True if BTS has published `month`. Only "not found" means "not published yet": any
+    other failure (rate limit, outage) is raised, so it cannot silently shift the window."""
     request = urllib.request.Request(_url(month), method="HEAD")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.status == 200
-    except urllib.error.HTTPError:
-        return False
+    except urllib.error.HTTPError as err:
+        if err.code in (404, 410):
+            return False
+        raise
 
 
 def latest_months(n: int = 12, today: dt.date | None = None, max_lookback: int = 12) -> list[Month]:
@@ -89,6 +93,9 @@ def latest_months(n: int = 12, today: dt.date | None = None, max_lookback: int =
             window = [month]
             while len(window) < n:
                 window.append(previous(window[-1]))
+            missing = [m for m in window[1:] if not _exists(m)]
+            if missing:
+                raise RuntimeError(f"BTS months missing inside the window: {missing}")
             return window[::-1]
         month = previous(month)
     raise RuntimeError("No BTS on-time file found in the last year; is transtats.bts.gov up?")
@@ -115,11 +122,15 @@ def download(month: Month) -> Path:
 
 
 def to_parquet(month: Month) -> Path:
-    """Extract the CSV from the zip and keep the needed columns as typed Parquet."""
+    """Extract the CSV from the zip and keep the needed columns as typed Parquet.
+
+    Written to a `.part` file and renamed on success, so an interrupted run never leaves a
+    truncated Parquet file that later runs would take as done."""
     target = parquet_path(month)
     if target.exists():
         return target
     target.parent.mkdir(parents=True, exist_ok=True)
+    partial = target.with_suffix(".part")
     with zipfile.ZipFile(zip_path(month)) as archive, tempfile.TemporaryDirectory() as tmp:
         member = next(n for n in archive.namelist() if n.endswith(".csv"))
         csv_path = Path(archive.extract(member, tmp))
@@ -133,10 +144,11 @@ def to_parquet(month: Month) -> Path:
               SELECT {cols}
               FROM read_csv('{csv_path}', header=true, null_padding=true,
                             types={{{types}}})
-            ) TO '{target}' (FORMAT parquet, COMPRESSION zstd)
+            ) TO '{partial}' (FORMAT parquet, COMPRESSION zstd)
             """
         )
         con.close()
+    partial.rename(target)
     return target
 
 
