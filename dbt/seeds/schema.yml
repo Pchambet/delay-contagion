@@ -1,0 +1,10 @@
+version: 2
+
+seeds:
+  - name: airports
+    description: IATA airport -> IANA time zone and coordinates (from `airportsdata`).
+    columns:
+      - name: iata
+        data_tests: [unique, not_null]
+      - name: tz
+        data_tests: [not_null]
