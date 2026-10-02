@@ -43,7 +43,7 @@ h2 .num { color: var(--teal); margin-right: 8px; }
 h3 { font-size: 17px; margin: 28px 0 6px; }
 p { margin: 0 0 14px; }
 a { color: var(--teal); }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 32px 0 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 32px 0 8px; }
 .tile { border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; background: var(--soft); }
 .tile .v { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--teal); }
 .tile .l { font-size: 13px; color: var(--muted); line-height: 1.4; }
@@ -111,7 +111,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule);
 <p class="caption">Delay avoided on held-out days against the buffer actually scheduled on those days. Bands: 95% day-bootstrap CI.</p>
 <div class="callout">With $budget buffer minutes a day, the LP avoids <b>$lp_avoided</b> $lp_avoided_ci minutes of arrival delay per held-out day, against $uniform_avoided for uniform padding and $greedy_avoided for padding the most-delayed turns (paired difference to uniform: $greedy_gain $greedy_gain_ci). That is $lp_per_min minutes avoided per buffer minute, against $uniform_per_min and $greedy_per_min. Paired over days, the LP's edge over uniform is $lp_gain $lp_gain_ci minutes per day.</div>
 <h3>Does the LP overfit its scenarios?</h3>
-<p>An LP fitted on a handful of days learns their noise. Re-solving on independent random draws of 10 to 90 training days shows the in-sample edge over uniform padding shrinking from $size_train_small to $size_train_large as scenarios are added, while the held-out edge stays between $size_test_range: the structure it learns (where turns are tight relative to the delay that reaches them) carries over to unseen days.</p>
+<p>An LP fitted on a handful of days learns their noise. Re-solving on independent random draws of 10 to 90 training days shows the classic sample-average-approximation pattern: the in-sample edge over uniform padding shrinks from $size_train_small to $size_train_large as scenarios are added, while the held-out edge rises from $size_test_small to $size_test_large. With 10 days the LP chases those days' particular disruptions; with 90 it learns where turns are structurally too tight for the delay that reaches them.</p>
 <div id="chart-sizes" class="chart"></div>
 <p class="caption">Budget $budget min/day. Faint dots: individual draws; lines: mean over draws.</p>
 <h3>Where the buffer goes</h3>

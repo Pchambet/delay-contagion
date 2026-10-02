@@ -102,8 +102,8 @@ def hero_frontier() -> Path:
         f"vs {uni['avoided_test']:,.0f} for uniform ({ratio:.1f}×)\n"
         f"at a {buf['reference_budget']:,.0f} min/day budget",
         (lp["buffer_test"], lp["avoided_test"]),
-        xytext=(-190, 55),
-        textcoords="offset points",
+        xytext=(df.buffer_test.max() * 0.03, df.avoided_test.max() * 0.78),
+        textcoords="data",
         fontsize=9,
         color=INK,
         arrowprops={"arrowstyle": "-", "color": SLATE, "lw": 0.8},
@@ -264,13 +264,13 @@ def scenario_sizes() -> Path:
     mean = df.groupby("scenario_days")[["gain_train", "gain_test"]].mean().reset_index()
     fig, ax = plt.subplots(figsize=(8, 4.6))
     for col, color, label, dy in [
-        ("gain_train", SLATE, "in-sample (the scenario days themselves)", 8),
-        ("gain_test", TEAL, "out-of-sample (held-out days)", -16),
+        ("gain_train", SLATE, "in-sample (the scenario days themselves)", 10),
+        ("gain_test", TEAL, "out-of-sample (held-out days)", -18),
     ]:
         ax.scatter(df.scenario_days, df[col], color=color, s=14, alpha=0.45, lw=0)
         ax.plot(mean.scenario_days, mean[col], color=color, lw=2.2, marker="o", ms=4)
-        ax.annotate(label, (mean.scenario_days.iloc[-1], mean[col].iloc[-1]), xytext=(-4, dy),
-                    textcoords="offset points", color=color, fontsize=9, ha="right",
+        ax.annotate(label, (mean.scenario_days.iloc[1], mean[col].iloc[1]), xytext=(6, dy),
+                    textcoords="offset points", color=color, fontsize=9, ha="left",
                     fontweight="bold" if col == "gain_test" else "normal")  # fmt: skip
     ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
     ax.set_ylim(0, None)
@@ -279,7 +279,7 @@ def scenario_sizes() -> Path:
     ax.set_ylabel("Extra delay avoided vs uniform padding")
     last = mean.iloc[-1]
     ax.set_title(
-        f"In-sample optimism fades with more scenarios; the held-out edge stays near "
+        f"More scenario days: in-sample optimism falls, the held-out edge rises to "
         f"{last.gain_test:.0%}"
     )
     n_rep = df.replicate.nunique()
