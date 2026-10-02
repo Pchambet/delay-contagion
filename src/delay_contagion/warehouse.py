@@ -12,6 +12,7 @@ import subprocess
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import duckdb
 
@@ -48,3 +49,11 @@ def connect(warehouse: Path = WAREHOUSE, read_only: bool = True) -> duckdb.DuckD
         f"SET memory_limit='{DUCKDB_MEMORY_LIMIT}'; SET threads={DUCKDB_THREADS}; SET enable_progress_bar=false"
     )
     return con
+
+
+def fetch_one(con: duckdb.DuckDBPyConnection, sql: str, params: list[Any] | None = None) -> tuple:
+    """The single row of an aggregate query (fails loudly instead of returning None)."""
+    row = con.execute(sql, params).fetchone()
+    if row is None:
+        raise RuntimeError(f"query returned no row: {sql[:200]}")
+    return row

@@ -14,6 +14,7 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
+      - run: uv run mypy
       - run: uv run pytest -q
       - name: dbt build on the committed fixture (models + data tests)
         run: uv run delay-contagion build --fixture

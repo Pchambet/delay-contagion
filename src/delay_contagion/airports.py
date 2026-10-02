@@ -36,7 +36,7 @@ def build_seed(path: Path = AIRPORT_SEED) -> int:
             for a in airports.values()
             if a["country"] in COUNTRIES and a["iata"] and a["tz"]
         ),
-        key=lambda r: r["iata"],
+        key=lambda r: str(r["iata"]),
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as f:

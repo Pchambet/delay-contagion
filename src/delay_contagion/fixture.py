@@ -12,6 +12,7 @@ import duckdb
 
 from delay_contagion.ingest import COLUMNS
 from delay_contagion.paths import FIXTURE_FLIGHTS, FLIGHTS_DIR
+from delay_contagion.warehouse import fetch_one
 
 DAYS = ("2026-03-07", "2026-03-08")  # US clocks spring forward on 2026-03-08
 TAILS_PER_CARRIER = 25
@@ -44,6 +45,6 @@ def write() -> int:
         ) to '{FIXTURE_FLIGHTS}' (header, delimiter ',')
         """
     )
-    n = con.execute(f"select count(*) from read_csv('{FIXTURE_FLIGHTS}')").fetchone()[0]
+    n = fetch_one(con, f"select count(*) from read_csv('{FIXTURE_FLIGHTS}')")[0]
     con.close()
     return n
