@@ -1,0 +1,50 @@
+origin,n_events,primary_min,excess_min,multiplier,multiplier_lo,multiplier_hi,name,city,state,lat,lon
+MDW,4521,219736.0,311964.9415,1.4197,1.3296,1.5087,Chicago Midway International Airport,Chicago,Illinois,41.7856,-87.7527
+MKE,1531,105854.0,142021.1955,1.3417,1.2017,1.4783,General Mitchell International Airport,Milwaukee,Wisconsin,42.9469,-87.8971
+DAL,4757,232822.0,308142.5475,1.3235,1.2565,1.4015,Dallas Love Field,Dallas,Texas,32.846,-96.8509
+HOU,3321,154266.0,195508.6482,1.2673,1.1966,1.3398,William P Hobby Airport,Houston,Texas,29.6458,-95.2772
+DCA,9008,579403.0,729393.0346,1.2589,1.1789,1.3248,Ronald Reagan Washington Ntl Airport,Washington,District of Columbia,38.8514,-77.0377
+BWI,6380,280274.0,343120.0132,1.2242,1.1476,1.3024,Baltimore/Washington International Thurgood Marshall Airport,Baltimore,Maryland,39.1757,-76.669
+OAK,1750,77265.0,93791.6602,1.2139,1.1059,1.324,Oakland San Francisco Bay Airport,Oakland,California,37.7213,-122.2212
+STL,3375,180613.0,209462.2033,1.1597,1.0753,1.2371,St Louis Lambert International Airport,St Louis,Missouri,38.7487,-90.37
+ORD,26188,1712428.0,1967432.3426,1.1489,1.0845,1.2144,Chicago O'Hare International Airport,Chicago,Illinois,41.9769,-87.9082
+DTW,7844,516644.0,588347.7604,1.1388,1.0612,1.2265,Detroit Metro Wayne County Airport,Detroit,Michigan,42.2124,-83.3534
+BNA,5717,290253.0,312240.1167,1.0758,1.0143,1.1452,Nashville International Airport,Nashville,Tennessee,36.1245,-86.6782
+SJC,1775,81982.0,87889.3454,1.0721,0.944,1.1903,Mineta San Jose International Airport,San Jose,California,37.363,-121.9286
+LAS,10062,477639.0,503712.4523,1.0546,0.9913,1.1192,Harry Reid International Airport,Las Vegas,Nevada,36.0803,-115.1524
+FLL,5857,350958.0,369421.7379,1.0526,0.9954,1.1143,Fort Lauderdale/Hollywood International Airport,Fort Lauderdale,Florida,26.0717,-80.1497
+LGA,7129,455631.0,474984.6748,1.0425,0.9786,1.0991,Laguardia Airport,New York,New York,40.7772,-73.8726
+CVG,1895,122464.0,124774.4246,1.0189,0.8847,1.118,Cincinnati/Northern Kentucky International Airport,Covington,Kentucky,39.0488,-84.6678
+ATL,20120,1085401.0,1105864.5552,1.0189,0.9612,1.0695,Hartsfield/Jackson Atlanta International Airport,Atlanta,Georgia,33.6367,-84.4279
+MCI,2216,126365.0,127351.6054,1.0078,0.9079,1.1146,Kansas City International Airport,Kansas City,Missouri,39.2976,-94.7139
+DFW,29400,1850709.0,1829654.4151,0.9886,0.9439,1.0395,Dallas-Fort Worth International Airport,Dallas-Fort Worth,Texas,32.8972,-97.0377
+IND,2303,134114.0,132060.7034,0.9847,0.875,1.1005,Indianapolis International Airport,Indianapolis,Indiana,39.7173,-86.2946
+MCO,9978,586672.0,576118.6142,0.982,0.9334,1.0269,Orlando International Airport,Orlando,Florida,28.4294,-81.309
+AUS,4763,265363.0,256283.4974,0.9658,0.9041,1.025,Austin-Bergstrom International Airport,Austin,Texas,30.1945,-97.6699
+MSP,6638,413905.0,399175.7575,0.9644,0.898,1.0255,Minneapolis-St Paul International/Wold-Chamberlain Airport,Minneapolis,Minnesota,44.882,-93.2218
+BOS,8178,523152.0,503139.5557,0.9617,0.9046,1.0122,General Edward Lawrence Logan International Airport,Boston,Massachusetts,42.3629,-71.0064
+PHL,7343,495491.0,472471.8185,0.9535,0.9003,1.0083,Philadelphia International Airport,Philadelphia,Pennsylvania,39.8721,-75.2407
+SMF,2476,117044.0,111531.4258,0.9529,0.8491,1.0546,Sacramento International Airport,Sacramento,California,38.6954,-121.5908
+CMH,2237,137051.0,130555.1259,0.9526,0.8431,1.0554,John Glenn Columbus International Airport,Columbus,Ohio,39.997,-82.8922
+RDU,2315,149683.0,141973.0172,0.9485,0.8633,1.0414,Raleigh-Durham International Airport,Raleigh/Durham,North Carolina,35.8776,-78.7875
+PIT,1823,123123.0,116326.8395,0.9448,0.8488,1.0433,Pittsburgh International Airport,Pittsburgh,Pennsylvania,40.4914,-80.2327
+TPA,3421,197118.0,185170.9598,0.9394,0.8679,1.0063,Tampa International Airport,Tampa,Florida,27.9755,-82.5332
+DEN,17804,1004351.0,940527.8907,0.9365,0.8724,1.0026,Denver International Airport,Denver,Colorado,39.8617,-104.6732
+HNL,1939,88618.0,82615.8917,0.9323,0.8112,1.0572,Daniel K Inouye International Airport,Honolulu,Hawaii,21.3178,-157.9202
+MSY,2273,126565.0,117987.4522,0.9322,0.8518,1.0155,Louis Armstrong New Orleans International Airport,New Orleans,Louisiana,29.9933,-90.259
+SAT,1620,102079.0,92858.5827,0.9097,0.8028,1.0233,San Antonio International Airport,San Antonio,Texas,29.534,-98.4691
+CLE,1951,135672.0,122639.462,0.9039,0.8099,0.9975,Cleveland-Hopkins International Airport,Cleveland,Ohio,41.4094,-81.8547
+MIA,7989,498034.0,448792.9587,0.9011,0.8501,0.9507,Miami International Airport,Miami,Florida,25.7954,-80.2901
+SAN,4550,244701.0,219510.1227,0.8971,0.8444,0.9501,San Diego International Airport,San Diego,California,32.7336,-117.1897
+PHX,11868,657082.0,588841.5994,0.8961,0.8556,0.9333,Phoenix Sky Harbor International Airport,Phoenix,Arizona,33.4343,-112.0116
+JFK,6513,435891.0,384502.1529,0.8821,0.8289,0.9324,John F Kennedy International Airport,New York,New York,40.6399,-73.7787
+CLT,14362,890027.0,782645.7839,0.8794,0.8359,0.9251,Charlotte/Douglas International Airport,Charlotte,North Carolina,35.2132,-80.9514
+SNA,1798,102486.0,85290.2342,0.8322,0.7407,0.9302,John Wayne/Orange County Airport,Santa Ana,California,33.6757,-117.8682
+PDX,2865,145797.0,121156.7638,0.831,0.7721,0.8911,Portland International Airport,Portland,Oregon,45.5887,-122.5969
+EWR,7081,456385.0,373914.0131,0.8193,0.752,0.8821,Newark Liberty International Airport,Newark,New Jersey,40.6925,-74.1687
+SEA,10029,526562.0,412176.7289,0.7828,0.7467,0.8194,Seattle-Tacoma International Airport,Seattle,Washington,47.4499,-122.3118
+SLC,5307,305096.0,238137.0098,0.7805,0.7299,0.8311,Salt Lake City International Airport,Salt Lake City,Utah,40.7884,-111.9778
+SFO,6370,395128.0,294751.4139,0.746,0.6916,0.7963,San Francisco International Airport,San Francisco,California,37.6188,-122.3754
+LAX,10894,652443.0,481346.5792,0.7378,0.701,0.7728,Los Angeles International Airport,Los Angeles,California,33.9425,-118.408
+IAD,2655,179808.0,131963.769,0.7339,0.6664,0.8073,Washington Dulles International Airport,Washington,District of Columbia,38.9475,-77.4599
+IAH,6894,432327.0,309338.2491,0.7155,0.6593,0.7672,George Bush Intcntl/Houston Airport,Houston,Texas,29.9844,-95.3414
