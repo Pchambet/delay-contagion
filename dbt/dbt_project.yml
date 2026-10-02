@@ -1,0 +1,36 @@
+name: delay_contagion
+version: "1.0.0"
+config-version: 2
+profile: delay_contagion
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets: ["target", "logs"]
+
+vars:
+  # Glob of monthly Parquet files (or a CSV fixture). Set by the CLI / Makefile.
+  flights_path: "{{ env_var('DC_FLIGHTS') }}"
+  # A turn links two consecutive legs of the same tail only if the scheduled ground time
+  # is within [0, max_turn_min]; longer gaps (overnight, maintenance) reset the delay.
+  max_turn_min: 300
+
+models:
+  delay_contagion:
+    +materialized: table
+    staging:
+      +schema: staging
+    intermediate:
+      +schema: intermediate
+    marts:
+      +schema: marts
+
+seeds:
+  delay_contagion:
+    airports:
+      +column_types:
+        iata: varchar
+        tz: varchar
+        lat: double
+        lon: double

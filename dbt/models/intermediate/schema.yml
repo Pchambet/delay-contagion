@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: int_leg_sequence
+    description: Operated legs ordered per aircraft, with chain membership and turn linkage.
+    columns:
+      - name: flight_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_flights')
+                field: flight_id
+      - name: chain_id
+        data_tests: [not_null]
+  - name: int_rotations
+    description: Consecutive legs of the same aircraft (inbound -> outbound) with scheduled turn time.
+    columns:
+      - name: turn_id
+        data_tests: [unique, not_null]
+      - name: in_flight_id
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_flights')
+                field: flight_id
+      - name: sched_turn_min
+        data_tests: [not_null]

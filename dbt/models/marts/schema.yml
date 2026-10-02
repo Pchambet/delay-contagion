@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: fct_turns
+    description: Aircraft turns with inbound arrival delay, outbound departure delay and slack.
+    columns:
+      - name: turn_id
+        data_tests: [unique, not_null]
+      - name: out_flight_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('fct_legs')
+                field: flight_id
+      - name: inbound_arr_delay
+        data_tests: [not_null]
+      - name: outbound_dep_delay
+        data_tests: [not_null]
+  - name: fct_legs
+    description: Operated legs with chain position (leg_seq, legs_remaining) and delays.
+    columns:
+      - name: flight_id
+        data_tests: [unique, not_null]
+      - name: chain_id
+        data_tests: [not_null]
+      - name: dep_period
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [night, morning, afternoon, evening]
+  - name: agg_airport_hour
+    description: Station x local hour volume, punctuality and delay-cause minutes.
+    columns:
+      - name: dep_hour_local
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+                quote: false
+  - name: agg_carrier_month
+    description: Carrier x month scorecard with delay-cause decomposition.
+  - name: agg_delay_causes
+    description: Delay-cause minutes by carrier and local departure hour.

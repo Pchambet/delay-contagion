@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: stg_flights
+    description: One row per scheduled flight, typed, with UTC timestamps and cancellation flags.
+    columns:
+      - name: flight_id
+        description: carrier-flight_number-origin-local scheduled departure (yyyymmddhhmm).
+        data_tests: [unique, not_null]
+      - name: carrier
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [AA, AS, B6, DL, F9, G4, HA, MQ, NK, OH, OO, UA, WN, YX, "9E", QX, ZW, PT, C5, G7, EV, CP]
+              config:
+                severity: warn
+      - name: origin
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('airports')
+                field: iata
+      - name: dest
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('airports')
+                field: iata
+      - name: crs_dep_utc
+        data_tests: [not_null]
+      - name: crs_arr_utc
+        data_tests: [not_null]
+      - name: is_cancelled
+        data_tests: [not_null]

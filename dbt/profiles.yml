@@ -1,0 +1,11 @@
+delay_contagion:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DC_WAREHOUSE') }}"
+      threads: 1
+      settings:
+        memory_limit: "3GB"
+        threads: 3
+        TimeZone: "UTC"
