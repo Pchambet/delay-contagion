@@ -29,6 +29,7 @@ class Config:
     lp_carrier: str = "WN"
     lp_scenarios: int = 90  # training days sampled as SAA scenarios
     lp_scenario_sizes: list[int] = field(default_factory=lambda: [10, 30, 60, 90])
+    lp_size_replicates: int = 3
     lp_b_max: float = 20.0  # max extra minutes on any one turn
     lp_budgets: list[float] = field(
         default_factory=lambda: [0, 150, 300, 600, 900, 1200, 1800, 2400]
@@ -141,12 +142,13 @@ def run_contagion(con, cfg: Config, all_months: list[str], summary: dict) -> Non
 
 
 def _days(con, carrier: str, months_: list[str]) -> list:
+    """Operating days (chain start dates) of `carrier` that fall in `months_`."""
     month_sql = ", ".join(f"'{m}'" for m in months_)
     return [
         r[0]
         for r in con.execute(
             f"select distinct chain_date from marts.fct_legs where carrier = ? "
-            f"and flight_month in ({month_sql}) order by 1",
+            f"and strftime(chain_date, '%Y-%m') in ({month_sql}) order by 1",
             [carrier],
         ).fetchall()
     ]
@@ -170,15 +172,57 @@ def _ci(boot: np.ndarray, per_day: np.ndarray) -> tuple[float, float]:
     return float(lo), float(hi)
 
 
+def scenario_size_study(
+    con,
+    cfg: Config,
+    train_days: list,
+    legs_te: pd.DataFrame,
+    base_te: np.ndarray,
+    tau: float,
+    beta: float,
+    t0: float,
+) -> pd.DataFrame:
+    """Out-of-sample value of the LP as the scenario set grows, over independent draws.
+
+    In-sample gains are optimistic (the LP fits the days it sees); the held-out gain is what
+    a planner would actually get. Each replicate is a fresh random order of training days,
+    with nested sets of the first S days.
+    """
+    rows = []
+    for rep in range(cfg.lp_size_replicates):
+        order = np.random.default_rng(cfg.seed + 100 + rep).permutation(len(train_days))
+        for n in cfg.lp_scenario_sizes:
+            legs_n = buffer_lp.load_legs(con, cfg.lp_carrier, [train_days[i] for i in order[:n]])
+            cells = _cells(legs_n)
+            sc_n = buffer_lp.from_legs(legs_n, cells, tau, beta)
+            sc_te = buffer_lp.from_legs(legs_te, cells, tau, beta)
+            lp_n = buffer_lp.BufferLP(sc_n, len(cells), tau, beta, cfg.lp_b_max)
+            b_lp, _ = lp_n.solve(cfg.lp_reference_budget)
+            uni = buffer_lp.uniform_policy(lp_n.nbar, cfg.lp_reference_budget, cfg.lp_b_max)
+            base_n = buffer_lp.daily_delay(sc_n, sc_n.obs_arr)
+            rows.append(
+                {
+                    "replicate": rep,
+                    "scenario_days": n,
+                    "lp_avoided_train": _avoided(sc_n, base_n, b_lp, tau, beta).mean(),
+                    "lp_avoided_test": _avoided(sc_te, base_te, b_lp, tau, beta).mean(),
+                    "uniform_avoided_train": _avoided(sc_n, base_n, uni, tau, beta).mean(),
+                    "uniform_avoided_test": _avoided(sc_te, base_te, uni, tau, beta).mean(),
+                }
+            )
+            _log(f"sample-size study: replicate {rep}, {n} scenario days", t0)
+    df = pd.DataFrame(rows)
+    df["gain_train"] = df.lp_avoided_train / df.uniform_avoided_train - 1
+    df["gain_test"] = df.lp_avoided_test / df.uniform_avoided_test - 1
+    return df
+
+
 def run_buffer(con, cfg: Config, train: list[str], test: list[str], summary: dict, t0) -> None:
     hinge = pd.read_csv(RESULTS / "hinge_carriers.csv").set_index("group").loc[cfg.lp_carrier]
     tau, beta = float(hinge["tau"]), float(hinge["beta"])
     rng = np.random.default_rng(cfg.seed)
     train_days = _days(con, cfg.lp_carrier, train)
-    # One random order of training days; the first S days are the S-scenario sample, so
-    # the sample-size study below uses nested scenario sets.
-    order = rng.permutation(len(train_days))
-    scen_days = sorted(train_days[i] for i in order[: cfg.lp_scenarios])
+    scen_days = sorted(rng.choice(train_days, size=cfg.lp_scenarios, replace=False).tolist())
     legs_tr = buffer_lp.load_legs(con, cfg.lp_carrier, scen_days)
     legs_te = buffer_lp.load_legs(con, cfg.lp_carrier, _days(con, cfg.lp_carrier, test))
     cells = _cells(legs_tr)
@@ -252,33 +296,10 @@ def run_buffer(con, cfg: Config, train: list[str], test: list[str], summary: dic
     alloc = alloc[alloc.buffer_min > 1e-6].sort_values("buffer_min_per_day", ascending=False)
     _write(alloc, "buffer_allocation.csv")
 
-    # Sample-size study: out-of-sample value of the LP as the scenario set grows.
-    sizes = []
-    for n in cfg.lp_scenario_sizes:
-        days_n = sorted(train_days[i] for i in order[:n])
-        sc_n = buffer_lp.from_legs(
-            buffer_lp.load_legs(con, cfg.lp_carrier, days_n), cells, tau, beta
-        )
-        lp_n = buffer_lp.BufferLP(sc_n, n_cells, tau, beta, cfg.lp_b_max)
-        b_n, _ = lp_n.solve(cfg.lp_reference_budget)
-        uni = buffer_lp.uniform_policy(lp_n.nbar, cfg.lp_reference_budget, cfg.lp_b_max)
-        base_n = buffer_lp.daily_delay(sc_n, sc_n.obs_arr)
-        gain = _avoided(sc_te, base_te, b_n, tau, beta) - _avoided(sc_te, base_te, uni, tau, beta)
-        lo, hi = _ci(boot, gain)
-        sizes.append(
-            {
-                "scenario_days": n,
-                "avoided_test": _avoided(sc_te, base_te, b_n, tau, beta).mean(),
-                "avoided_train": _avoided(sc_n, base_n, b_n, tau, beta).mean(),
-                "uniform_avoided_test": _avoided(sc_te, base_te, uni, tau, beta).mean(),
-                "uniform_avoided_train": _avoided(sc_n, base_n, uni, tau, beta).mean(),
-                "gain_vs_uniform_test": gain.mean(),
-                "gain_vs_uniform_test_lo": lo,
-                "gain_vs_uniform_test_hi": hi,
-            }
-        )
-        _log(f"sample-size study: {n} scenario days", t0)
-    _write(pd.DataFrame(sizes), "buffer_scenario_sizes.csv")
+    _write(
+        scenario_size_study(con, cfg, train_days, legs_te, base_te, tau, beta, t0),
+        "buffer_scenario_sizes.csv",
+    )
 
     ref = frontier[frontier.budget == cfg.lp_reference_budget].set_index("policy")
     summary["buffer"] = {
