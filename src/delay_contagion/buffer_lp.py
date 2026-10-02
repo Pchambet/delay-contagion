@@ -20,7 +20,16 @@ Decision (sample average approximation over S training days):
 where nbar_c is the mean number of daily turns in cell c, so B is in buffer minutes per
 day. The max() terms are linearised with z_j >= 0, a_j >= 0 and one inequality each;
 because every coefficient pushing them up is non-negative (beta >= 0), the LP optimum sits
-exactly on the recursion. Solved with HiGHS; budgets are swept with warm starts.
+exactly on the recursion. Solved with HiGHS: dual simplex for small instances; for the
+full year of scenarios (~1.8M rows) the interior-point solver with crossover is several
+times faster than warm-started simplex once the budget is large.
+
+What "delay" means here. `A_j` is arrival delay against the *padded* schedule: a buffer
+moves every later departure of the chain back in the published timetable, so it never makes
+an aircraft earlier on the clock. That is the DOT on-time definition airlines are measured
+on, and the quantity schedule padding is used to buy: predictability, not speed.
+`schedule_shift` gives the cumulative timetable shift, so lateness against the original
+timetable can be reported alongside.
 """
 
 from __future__ import annotations
@@ -130,6 +139,16 @@ def daily_buffer(sc: Scenarios, b_cell: np.ndarray) -> np.ndarray:
     return np.bincount(sc.day, weights=b, minlength=sc.n_days)
 
 
+def schedule_shift(sc: Scenarios, b_cell: np.ndarray) -> np.ndarray:
+    """How far each leg moves later in the timetable: the buffers on its chain so far."""
+    b = np.where(sc.cell >= 0, b_cell[np.maximum(sc.cell, 0)], 0.0)
+    shift = np.where(sc.linked, b, 0.0)
+    for k in range(2, int(sc.seq.max()) + 1):
+        j = np.flatnonzero((sc.seq == k) & sc.linked)
+        shift[j] += shift[sc.pred[j]]
+    return shift
+
+
 def cell_turns_per_day(sc: Scenarios, n_cells: int) -> np.ndarray:
     turns = np.bincount(sc.cell[sc.cell >= 0], minlength=n_cells)
     return turns / sc.n_days
@@ -138,7 +157,15 @@ def cell_turns_per_day(sc: Scenarios, n_cells: int) -> np.ndarray:
 class BufferLP:
     """The SAA linear program, built once and re-solved for each budget."""
 
-    def __init__(self, sc: Scenarios, n_cells: int, tau: float, beta: float, b_max: float):
+    def __init__(
+        self,
+        sc: Scenarios,
+        n_cells: int,
+        tau: float,
+        beta: float,
+        b_max: float,
+        solver: str = "simplex",
+    ):
         if (sc.cell[sc.linked] < 0).any():
             raise ValueError("every training turn must belong to a decision cell")
         self.sc, self.n_cells = sc, n_cells
@@ -205,12 +232,16 @@ class BufferLP:
         self.h = highspy.Highs()
         self.h.setOptionValue("output_flag", False)
         self.h.setOptionValue("threads", 3)
+        self.h.setOptionValue("solver", solver)
+        self.cold = solver != "simplex"  # interior point gains nothing from the last basis
         self.h.passModel(lp)
         self.shape = (r, n_var)
 
     def solve(self, budget: float) -> tuple[np.ndarray, float]:
         """Optimal per-cell buffers and objective (mean daily delay minutes)."""
         self.h.changeRowBounds(self.budget_row, -highspy.kHighsInf, float(budget))
+        if self.cold:
+            self.h.clearSolver()
         self.h.run()
         status = self.h.getModelStatus()
         if status != highspy.HighsModelStatus.kOptimal:
@@ -225,6 +256,21 @@ def uniform_policy(nbar: np.ndarray, budget: float, b_max: float) -> np.ndarray:
     return np.where(nbar > 0, per_turn, 0.0)
 
 
+def uniform_step_policy(
+    nbar: np.ndarray, budget: float, step: float = 5.0, seed: int = 0
+) -> np.ndarray:
+    """Uniform padding a planner could publish: `step` whole minutes on randomly chosen cells
+    until the budget is spent (the cell that would overshoot it is skipped)."""
+    b = np.zeros_like(nbar, dtype=float)
+    left = budget
+    for c in np.random.default_rng(seed).permutation(len(nbar)):
+        cost = step * nbar[c]
+        if 0 < cost <= left:
+            b[c] = step
+            left -= cost
+    return b
+
+
 def greedy_policy(score: np.ndarray, nbar: np.ndarray, budget: float, b_max: float) -> np.ndarray:
     """Pad the worst cells first: b_max to cells in decreasing `score` until the budget is
     spent (the last cell gets the remainder)."""
@@ -236,6 +282,56 @@ def greedy_policy(score: np.ndarray, nbar: np.ndarray, budget: float, b_max: flo
         b[c] = min(b_max, left / nbar[c])
         left -= b[c] * nbar[c]
     return b
+
+
+def round_to_step(b_cell: np.ndarray, step: float = 5.0) -> np.ndarray:
+    """Timetables move in whole steps: round each cell's buffer to the nearest `step`."""
+    return np.round(b_cell / step) * step
+
+
+def marginal_value_score(
+    sc: Scenarios, nbar: np.ndarray, tau: float, beta: float, b_max: float
+) -> np.ndarray:
+    """Delay avoided per buffer minute when one cell alone is padded by `b_max`.
+
+    A one-at-a-time version of what the LP does jointly: it sees how far each turn's delay
+    travels down the chain, but not how buffers in different cells interact. Only chains
+    that touch the cell are re-simulated.
+    """
+    base = np.maximum(simulate(sc, np.zeros(len(nbar)), tau, beta), 0.0)
+    chain_start = np.where(sc.linked, -1, np.arange(len(sc.p)))
+    for k in range(2, int(sc.seq.max()) + 1):
+        j = np.flatnonzero((sc.seq == k) & sc.linked)
+        chain_start[j] = chain_start[sc.pred[j]]
+    score = np.zeros(len(nbar))
+    for c in np.flatnonzero(nbar > 0):
+        chains = np.unique(chain_start[sc.cell == c])
+        legs = np.flatnonzero(np.isin(chain_start, chains))
+        sub = _subset(sc, legs)
+        b = np.zeros(len(nbar))
+        b[c] = b_max
+        arr = np.maximum(simulate(sub, b, tau, beta), 0.0)
+        score[c] = (base[legs].sum() - arr.sum()) / sc.n_days / (b_max * nbar[c])
+    return score
+
+
+def _subset(sc: Scenarios, legs: np.ndarray) -> Scenarios:
+    """Scenarios restricted to whole chains (`legs` sorted, predecessors included)."""
+    pos = np.full(len(sc.p), -1)
+    pos[legs] = np.arange(len(legs))
+    pred = sc.pred[legs]
+    return Scenarios(
+        day=sc.day[legs],
+        pred=np.where(pred >= 0, pos[np.maximum(pred, 0)], -1),
+        seq=sc.seq[legs],
+        s=sc.s[legs],
+        p=sc.p[legs],
+        e=sc.e[legs],
+        cell=sc.cell[legs],
+        obs_dep=sc.obs_dep[legs],
+        obs_arr=sc.obs_arr[legs],
+        n_days=sc.n_days,
+    )
 
 
 def propagated_delay_score(sc: Scenarios, n_cells: int, tau: float, beta: float) -> np.ndarray:
