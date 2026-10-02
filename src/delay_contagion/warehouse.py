@@ -44,5 +44,7 @@ def run_dbt(
 
 def connect(warehouse: Path = WAREHOUSE, read_only: bool = True) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(str(warehouse), read_only=read_only)
-    con.execute(f"SET memory_limit='{DUCKDB_MEMORY_LIMIT}'; SET threads={DUCKDB_THREADS}")
+    con.execute(
+        f"SET memory_limit='{DUCKDB_MEMORY_LIMIT}'; SET threads={DUCKDB_THREADS}; SET enable_progress_bar=false"
+    )
     return con

@@ -34,3 +34,6 @@ seeds:
         tz: varchar
         lat: double
         lon: double
+
+flags:
+  send_anonymous_usage_stats: false

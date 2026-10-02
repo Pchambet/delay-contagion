@@ -4,7 +4,7 @@
 -- to the previous one (a "turn") when the aircraft physically continues: same station,
 -- previous leg not diverted, scheduled ground time in [0, max_turn_min], and a non-negative
 -- actual ground time (a negative one means the tail number was swapped or misreported).
--- Legs whose UTC block time disagrees with the published one by > 30 min are dropped.
+-- Legs with an inconsistent or non-positive scheduled block time are dropped (~0.003% of legs).
 -- Unlinked legs start a new chain; a chain is one aircraft's continuous run of turns.
 
 with legs as (
@@ -15,8 +15,10 @@ with legs as (
       and crs_dep_utc is not null
       and crs_arr_utc is not null
       and dep_delay is not null
-      -- a few source records have a block time inconsistent with their own clock times
+      -- a few source records carry a block time inconsistent with their own clock times,
+      -- or a non-positive one (rescheduled departure, stale arrival)
       and abs(coalesce(block_time_residual_min, 0)) <= 30
+      and crs_arr_utc > crs_dep_utc
 ),
 
 ordered as (
