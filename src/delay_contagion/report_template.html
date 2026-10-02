@@ -99,6 +99,7 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule);
 <div class="callout">Across $events delayed clean starts (15 minutes or more), each primary minute generates <b>$multiplier</b> $multiplier_ci further minutes of arrival delay later in the aircraft's day.</div>
 <div id="chart-contagion" class="chart"></div>
 <p class="caption">Extra downstream arrival delay against the primary delay, with 95% day-bootstrap intervals. Morning delays travel furthest: they have the most legs ahead of them.</p>
+<p>By carrier, the multiplier runs from $carrier_mult_low to $carrier_mult_high; Southwest, whose aircraft fly the most legs a day on the shortest turns, sits at $wn_multiplier.</p>
 <h3>Super-spreader airports</h3>
 <p>The multiplier depends on where the delay starts. The top of the ranking is $top_spreader at $top_spreader_multiplier, and the list is dominated by stations with short, tightly chained turns.</p>
 <div id="chart-map" class="chart tall"></div>

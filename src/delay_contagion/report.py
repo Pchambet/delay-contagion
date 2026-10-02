@@ -49,8 +49,9 @@ def _hinge_chart() -> dict:
     params = pd.read_csv(RESULTS / "hinge_carriers.csv").set_index("group")
     binned = pd.read_csv(RESULTS / "hinge_binned_test.csv")
     shown = {"WN": TEAL, "DL": AMBER, "OO": SLATE}
-    palette = ["#0f766e", "#b45309", "#475569", "#0e7490", "#a16207", "#334155", "#115e59",
-               "#92400e", "#1e293b", "#155e75", "#78350f"]  # fmt: skip
+    # Mid-luminance hues so every carrier stays legible on light and dark backgrounds.
+    palette = ["#0891b2", "#b45309", "#7c3aed", "#15803d", "#be123c", "#a16207", "#0f766e",
+               "#9333ea", "#c2410c", "#4d7c0f", "#db2777"]  # fmt: skip
     g = np.arange(-60, 151, 2)
     data = []
     others = iter(palette)

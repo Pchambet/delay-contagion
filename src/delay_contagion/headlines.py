@@ -10,6 +10,7 @@ import json
 
 import pandas as pd
 
+from delay_contagion.descriptive import CARRIER_NAMES
 from delay_contagion.paths import RESULTS
 
 
@@ -29,6 +30,9 @@ def compute() -> dict[str, str]:
     peak_hour = int(by_hour.loc[5:23, "reactionary_per_flight"].idxmax())
     sizes = pd.read_csv(RESULTS / "buffer_scenario_sizes.csv")
     size_mean = sizes.groupby("scenario_days")[["gain_train", "gain_test"]].mean()
+    by_carrier = pd.read_csv(RESULTS / "contagion_by_carrier.csv").sort_values("multiplier")
+    lo_c, hi_c = by_carrier.iloc[0], by_carrier.iloc[-1]
+    wn_mult = by_carrier.set_index("carrier").loc[buf["carrier"]]
     mae = prop["mae"]
     o = con["overall"]
     return {
@@ -55,6 +59,9 @@ def compute() -> dict[str, str]:
         "multiplier_ci": f"[{o['multiplier_lo']:.2f}, {o['multiplier_hi']:.2f}]",
         "events": f"{o['n_events']:,}",
         "top_spreader": f"{top.origin} ({top.city})",
+        "carrier_mult_low": f"{lo_c.multiplier:.2f} ({CARRIER_NAMES.get(lo_c.carrier, lo_c.carrier)})",
+        "carrier_mult_high": f"{hi_c.multiplier:.2f} ({CARRIER_NAMES.get(hi_c.carrier, hi_c.carrier)})",
+        "wn_multiplier": f"{wn_mult.multiplier:.2f}",
         "min_events": f"{s['config']['min_events_airport']:,}",
         "top_spreader_multiplier": f"{top.multiplier:.2f}",
         "budget": f"{buf['reference_budget']:,.0f}",
