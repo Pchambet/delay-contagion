@@ -72,6 +72,8 @@ def compute() -> dict[str, str]:
         "lp_vs_uniform": f"{lp['avoided_test'] / uni['avoided_test']:.1f}×",
         "lp_gain": f"{lp['gain_vs_uniform']:,.0f}",
         "lp_gain_ci": f"[{lp['gain_vs_uniform_lo']:,.0f}, {lp['gain_vs_uniform_hi']:,.0f}]",
+        "greedy_gain": f"{greedy['gain_vs_uniform']:+,.0f}",
+        "greedy_gain_ci": f"[{greedy['gain_vs_uniform_lo']:+,.0f}, {greedy['gain_vs_uniform_hi']:+,.0f}]",
         "lp_per_min": f"{lp['avoided_per_buffer_min']:.2f}",
         "uniform_per_min": f"{uni['avoided_per_buffer_min']:.2f}",
         "greedy_per_min": f"{greedy['avoided_per_buffer_min']:.2f}",

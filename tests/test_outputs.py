@@ -36,6 +36,7 @@ README_KEYS = [
     "greedy_avoided",
     "lp_vs_uniform",
     "lp_gain_ci",
+    "greedy_gain_ci",
     "lp_per_min",
     "uniform_per_min",
     "greedy_per_min",
