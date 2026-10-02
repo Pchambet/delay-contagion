@@ -82,7 +82,7 @@ def latest_months(n: int = 12, today: dt.date | None = None, max_lookback: int =
     BTS publishes with a lag of two to three months; we probe backwards from the current
     month until the first file that exists.
     """
-    today = today or dt.date.today()
+    today = today or dt.datetime.now(dt.UTC).date()
     month: Month = (today.year, today.month)
     for _ in range(max_lookback):
         if _exists(month):

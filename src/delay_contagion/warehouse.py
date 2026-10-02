@@ -37,7 +37,7 @@ def run_dbt(
     args = [str(dbt), *command, "--project-dir", str(DBT_DIR), "--profiles-dir", str(DBT_DIR)]
     if artifacts_dir is not None:
         args += ["--target-path", str(artifacts_dir / "target"), "--log-path", str(artifacts_dir)]
-    result = subprocess.run(args, env=env, capture_output=True, text=True)
+    result = subprocess.run(args, env=env, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"dbt {' '.join(command)} failed:\n{result.stdout[-4000:]}")
 

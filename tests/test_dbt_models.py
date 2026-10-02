@@ -97,7 +97,10 @@ def test_only_physical_turns_are_linked(con):
     ).fetchall()
     # Not linked: N200 (actual ground time 30 + 0 - 90 < 0, a tail swap), N300 (BWI != DCA),
     # N400 (inbound diverted). Every time-zone test flight is a lone leg.
-    assert [(i.split("-")[1], o.split("-")[1]) for i, o in turns] == [("101", "102"), ("102", "104")]
+    assert [(i.split("-")[1], o.split("-")[1]) for i, o in turns] == [
+        ("101", "102"),
+        ("102", "104"),
+    ]
 
 
 def test_turn_actual_ground_time(con):

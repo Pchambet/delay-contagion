@@ -43,6 +43,10 @@ extend-exclude = ["dbt"]
 [tool.ruff.lint]
 extend-select = ["I", "B", "UP", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# The warehouse stores naive UTC timestamps; expected values mirror that.
+"tests/test_dbt_models.py" = ["DTZ001"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
