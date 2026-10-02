@@ -49,6 +49,9 @@ def _utc(con, flight_number: int) -> tuple[datetime, datetime]:
         (6, datetime(2026, 7, 2, 7, 0), datetime(2026, 7, 2, 10, 30)),
         # 02:30 does not exist in Atlanta on 2026-03-08: read with the pre-transition offset.
         (7, datetime(2026, 3, 8, 7, 30), datetime(2026, 3, 8, 8, 0)),
+        # 01:30 happens twice in Chicago on 2025-11-02: read as the first occurrence (CDT,
+        # UTC-5); DTW 03:00 EST is after the rollback, and the 90-min block time agrees.
+        (8, datetime(2025, 11, 2, 6, 30), datetime(2025, 11, 2, 8, 0)),
     ],
 )
 def test_local_times_convert_to_utc(con, flight, dep, arr):
