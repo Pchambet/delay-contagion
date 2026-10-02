@@ -1,0 +1,48 @@
+[project]
+name = "delay-contagion"
+version = "0.1.0"
+description = "How a late flight infects the rest of the day through aircraft rotations, and where a limited turnaround-buffer budget stops it best."
+readme = "README.md"
+authors = [
+    { name = "Pierre Chambet", email = "pierrechambet@gmail.com" }
+]
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+dependencies = [
+    "airportsdata>=20260905",
+    "dbt-core>=1.12.5",
+    "dbt-duckdb>=1.11.0",
+    "duckdb>=1.5.6",
+    "highspy>=1.15.1",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "plotly>=7.1.0",
+    "pyarrow>=25.0.1",
+    "scipy>=1.18.1",
+]
+
+[project.scripts]
+delay-contagion = "delay_contagion.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["dbt"]
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
