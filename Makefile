@@ -5,7 +5,7 @@ RUN := uv run delay-contagion
 setup:            ## install the locked environment
 	uv sync --locked
 
-data:             ## download + cache the latest 12 BTS months (~400 MB zip, ~80 MB parquet)
+data:             ## download + cache the latest 12 BTS months (~350 MB zip, ~80 MB parquet)
 	$(RUN) data
 
 build:            ## dbt build on the full data (models + data tests)
