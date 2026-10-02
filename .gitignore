@@ -14,3 +14,4 @@ dbt/logs/
 dbt/dbt_packages/
 logs/
 dbt/.user.yml
+data/*.duckdb.tmp/

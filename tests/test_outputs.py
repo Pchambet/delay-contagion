@@ -35,6 +35,7 @@ README_KEYS = [
     "uniform_avoided",
     "greedy_avoided",
     "lp_vs_uniform",
+    "lp_gain",
     "lp_gain_ci",
     "greedy_gain_ci",
     "lp_per_min",
@@ -44,7 +45,8 @@ README_KEYS = [
     "test_days",
     "size_train_small",
     "size_train_large",
-    "size_test_range",
+    "size_test_small",
+    "size_test_large",
 ]
 
 

@@ -85,7 +85,7 @@ def compute() -> dict[str, str]:
         "turns_per_day": f"{buf['turns_per_day_train']:,.0f}",
         "size_train_small": f"{size_mean.gain_train.iloc[0]:.0%}",
         "size_train_large": f"{size_mean.gain_train.iloc[-1]:.0%}",
-        "size_test_range": f"{size_mean.gain_test.min():.0%} and {size_mean.gain_test.max():.0%}",
+        "size_test_small": f"{size_mean.gain_test.iloc[0]:.0%}",
         "size_test_large": f"{size_mean.gain_test.iloc[-1]:.0%}",
         "baseline_delay": f"{buf['baseline_delay_per_day_test']:,.0f}",
     }

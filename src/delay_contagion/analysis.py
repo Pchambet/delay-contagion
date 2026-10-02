@@ -1,7 +1,7 @@
 """End-to-end analysis on the warehouse marts; writes the small result tables in `results/`.
 
 Figures and the report are rendered from `results/` alone, so they can be rebuilt without
-the 400 MB of raw data.
+the ~350 MB of raw data.
 
 Time split: the 12 months are cut chronologically into 9 training months and 3 held-out
 months. Every fitted quantity (hinge parameters, LP buffers, heuristic rankings) sees only
@@ -51,6 +51,17 @@ def months(con: duckdb.DuckDBPyConnection) -> list[str]:
 
 def _log(msg: str, t0: float) -> None:
     print(f"[{time.perf_counter() - t0:6.1f}s] {msg}", flush=True)
+
+
+def _round(obj, digits: int = 6):
+    """Round floats in nested containers (last-digit float noise varies between runs)."""
+    if isinstance(obj, float):
+        return round(obj, digits)
+    if isinstance(obj, dict):
+        return {k: _round(v, digits) for k, v in obj.items()}
+    if isinstance(obj, list | tuple):
+        return [_round(v, digits) for v in obj]
+    return obj
 
 
 def _write(df: pd.DataFrame, name: str, decimals: int = 4) -> None:
@@ -273,7 +284,6 @@ def run_buffer(con, cfg: Config, train: list[str], test: list[str], summary: dic
                     "buffer_test": buffer_lp.daily_buffer(sc_te, b).mean(),
                     "buffer_train": buffer_lp.daily_buffer(sc_tr, b).mean(),
                     "cells_padded": int((b > 1e-6).sum()),
-                    "solve_seconds": solve_s if name == "LP-optimised" else np.nan,
                 }
             )
         _log(f"budget {budget:>6.0f} min/day: LP solved in {solve_s:5.1f}s", t0)
@@ -316,7 +326,7 @@ def run_buffer(con, cfg: Config, train: list[str], test: list[str], summary: dic
         "baseline_delay_per_day_test": float(base_te.mean()),
         "reference_budget": cfg.lp_reference_budget,
         "reference": json.loads(
-            ref.drop(columns=["budget", "solve_seconds"]).to_json(orient="index")
+            ref.drop(columns=["budget"]).to_json(orient="index", double_precision=6)
         ),
     }
 
@@ -335,5 +345,7 @@ def run(con: duckdb.DuckDBPyConnection, cfg: Config | None = None) -> dict:
     _log("contagion done", t0)
     run_buffer(con, cfg, train, test, summary, t0)
     _log("buffer LP done", t0)
-    (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2, default=str) + "\n")
+    # Rounded so that a re-run on the same data rewrites byte-identical files.
+    text = json.dumps(_round(summary), indent=2, default=str)
+    (RESULTS / "summary.json").write_text(text + "\n")
     return summary
