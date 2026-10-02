@@ -10,6 +10,8 @@ from __future__ import annotations
 import duckdb
 import pandas as pd
 
+from delay_contagion.warehouse import fetch_one
+
 CAUSES = ["carrier_min", "weather_min", "nas_min", "security_min", "late_aircraft_min"]
 CARRIER_NAMES = {
     "AA": "American", "AS": "Alaska", "B6": "JetBlue", "DL": "Delta", "F9": "Frontier",
@@ -50,18 +52,17 @@ def reactionary_by_hour(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
 
 
 def network_summary(con: duckdb.DuckDBPyConnection) -> dict[str, float]:
-    row = con.execute(
+    row = fetch_one(
+        con,
         f"""
         select sum(flights), {", ".join(f"sum({c})" for c in CAUSES)},
                min(flight_month), max(flight_month)
         from marts.agg_carrier_month
-        """
-    ).fetchone()
+        """,
+    )
     flights, *mins, first, last = row
-    turns, chains = con.execute(
-        "select count(*), count(distinct chain_id) from marts.fct_turns"
-    ).fetchone()
-    legs = con.execute("select count(*) from marts.fct_legs").fetchone()[0]
+    turns, chains = fetch_one(con, "select count(*), count(distinct chain_id) from marts.fct_turns")
+    legs = fetch_one(con, "select count(*) from marts.fct_legs")[0]
     return {
         "flights": int(flights),
         "operated_legs_in_chains": int(legs),
@@ -72,3 +73,28 @@ def network_summary(con: duckdb.DuckDBPyConnection) -> dict[str, float]:
         "reactionary_share": mins[-1] / sum(mins),
         "total_cause_minutes": float(sum(mins)),
     }
+
+
+def carrier_rotations(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    """How hard each carrier works its aircraft: legs per aircraft-day and scheduled turns.
+
+    An aircraft-day is one tail on one chain date; legs count operated legs in chains.
+    """
+    df = con.execute(
+        """
+        with days as (
+            select carrier, count(*) as legs, count(distinct (tail_number, chain_date)) as tail_days
+            from marts.fct_legs group by carrier
+        ),
+        turns as (
+            select carrier, median(sched_turn_min) as median_sched_turn_min,
+                   quantile_cont(sched_turn_min, 0.25) as p25_sched_turn_min
+            from marts.fct_turns group by carrier
+        )
+        select carrier, legs, tail_days, legs / tail_days as legs_per_aircraft_day,
+               median_sched_turn_min, p25_sched_turn_min
+        from days join turns using (carrier)
+        """
+    ).df()
+    df["name"] = df["carrier"].map(CARRIER_NAMES).fillna(df["carrier"])
+    return df.sort_values("legs_per_aircraft_day", ascending=False).reset_index(drop=True)
