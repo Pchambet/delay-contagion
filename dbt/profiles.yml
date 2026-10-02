@@ -3,7 +3,7 @@ delay_contagion:
   outputs:
     dev:
       type: duckdb
-      path: "{{ env_var('DC_WAREHOUSE') }}"
+      path: "{{ env_var('DC_WAREHOUSE', '../data/warehouse.duckdb') }}"
       threads: 1
       settings:
         memory_limit: "3GB"

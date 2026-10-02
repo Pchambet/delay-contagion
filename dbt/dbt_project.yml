@@ -10,8 +10,9 @@ test-paths: ["tests"]
 clean-targets: ["target", "logs"]
 
 vars:
-  # Glob of monthly Parquet files (or a CSV fixture). Set by the CLI / Makefile.
-  flights_path: "{{ env_var('DC_FLIGHTS') }}"
+  # Glob of monthly Parquet files (or a CSV fixture). Set by the CLI; the default assumes
+  # dbt is run from this directory.
+  flights_path: "{{ env_var('DC_FLIGHTS', '../data/interim/flights/*.parquet') }}"
   # A turn links two consecutive legs of the same tail only if the scheduled ground time
   # is within [0, max_turn_min]; longer gaps (overnight, maintenance) reset the delay.
   max_turn_min: 300
