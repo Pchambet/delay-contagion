@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Delay contagion</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d9488'/%3E%3Cpath d='M6 22 L13 15 L18 19 L26 9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-<meta name="description" content="How a late flight infects the rest of the day through aircraft rotations, and where a limited budget of turnaround buffer stops it best. US BTS data, $window.">
+<meta name="description" content="How a late flight infects the rest of the day through aircraft rotations, and where a limited budget of turnaround buffer absorbs it best. US BTS data, $window.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,8 +30,8 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--fg);
   font: 16px/1.65 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-feature-settings: "tnum" 1, "cv11" 1;
 }
+table, .tile .v, .ci { font-feature-settings: "tnum" 1; }
 main { max-width: 860px; margin: 0 auto; padding: 56px 16px 72px; }
 header .kicker { color: var(--teal); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 12.5px; }
 h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.12; margin: 10px 0 14px; letter-spacing: -0.02em; }
@@ -52,16 +52,16 @@ a { color: var(--teal); }
 .caption { font-size: 13.5px; color: var(--muted); margin-bottom: 18px; }
 .callout { border-left: 3px solid var(--teal); background: var(--chip); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 18px 0; }
 .table-wrap { overflow-x: auto; margin: 10px 0 18px; }
-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
 th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
-th { font-weight: 600; color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+th { font-weight: 600; color: var(--muted); font-size: 12.5px; white-space: normal; vertical-align: bottom; line-height: 1.3; }
 .ci { color: var(--muted); font-size: 12.5px; }
 code { font: 13.5px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--soft); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
 pre { background: var(--soft); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 13.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
 ul { padding-left: 20px; } li { margin-bottom: 6px; }
 footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--muted); }
-@media (max-width: 600px) { main { padding-top: 32px; } .chart { height: 340px; } .chart.tall { height: 380px; } .lede { font-size: 17px; } }
+@media (max-width: 600px) { main { padding-top: 32px; } .chart { height: 340px; } .chart.tall { height: 400px; } .lede { font-size: 17px; } .opt, td .ci { display: none; } td:first-child { white-space: normal; } th, td { padding: 7px 6px; } }
 </style>
 </head>
 <body>
@@ -69,66 +69,83 @@ footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule);
 <header>
   <div class="kicker">Aviation operations · network science · optimisation</div>
   <h1>Delay contagion</h1>
-  <p class="lede">How a late flight infects the rest of the day through aircraft rotations, and where a limited budget of turnaround buffer stops the contagion best.</p>
+  <p class="lede">How a late flight infects the rest of the day through aircraft rotations, and where a limited budget of turnaround buffer absorbs the contagion best.</p>
   <div class="meta"><span>US BTS on-time data, $window</span><span>$flights flights · $turns aircraft turns</span><a href="$repo">Code and data pipeline on GitHub</a></div>
 </header>
 
 <div class="tiles">
-  <div class="tile"><div class="v">$reactionary_share</div><div class="l">of cause-coded delay minutes are reactionary: the aircraft arrived late from its previous leg</div></div>
-  <div class="tile"><div class="v">$wn_tau min</div><div class="l">Southwest's effective minimum turn time; below it, inbound delay passes through at rate $wn_beta</div></div>
+  <div class="tile"><div class="v">$reactionary_share</div><div class="l">of cause-coded delay minutes (arrivals 15+ min late) are reactionary: the aircraft arrived late from its previous leg</div></div>
+  <div class="tile"><div class="v">$lp_carrier_tau min</div><div class="l">$lp_carrier_name's effective minimum turn time; past it, inbound delay passes through about one-for-one</div></div>
   <div class="tile"><div class="v">$multiplier</div><div class="l">extra downstream minutes per primary departure-delay minute, same aircraft, same day</div></div>
-  <div class="tile"><div class="v">$lp_vs_uniform</div><div class="l">delay removed by LP-placed buffer vs uniform padding, held-out days</div></div>
+  <div class="tile"><div class="v">$lp_vs_uniform</div><div class="l">as much delay avoided per buffer minute when an LP places it, vs uniform padding (held-out days)</div></div>
 </div>
 
+<div id="chart-frontier" class="chart tall"></div>
+<p class="caption">The decision payoff ($lp_carrier_name, $test_days held-out days): arrival delay avoided, measured against the padded schedule, for the buffer each policy actually schedules. Bands: 95% bootstrap CI over whole weeks ($test_weeks weeks). Details in section 4.</p>
+
 <h2><span class="num">1</span>$reactionary_share of delay comes from the previous flight</h2>
-<p>The BTS codes every arrival delay of 15 minutes or more into five causes. One of them, <em>late-arriving aircraft</em>, is not a new problem: it is an earlier delay riding the aircraft into its next leg. Over $window it is $reactionary_share of all cause-coded delay minutes, and it builds through the day: $reactionary_6am minutes per departing flight at 6:00, $reactionary_peak by $reactionary_peak_hour.</p>
+<p>The BTS codes every arrival delay of 15 minutes or more into five causes. One of them, <em>late-arriving aircraft</em>, is not a new problem: it is an earlier delay riding the aircraft into its next leg. Over $window it is $reactionary_share of all cause-coded delay minutes, and it builds through the day: $reactionary_6am minutes per departing flight at 6:00, $reactionary_peak by $reactionary_peak_hour. Across carriers the share runs from $cause_share_range; cause codes are self-reported, so that spread needs care.</p>
 <div id="chart-hour" class="chart"></div>
 <p class="caption">Cause-coded delay minutes per departing flight, by scheduled local departure hour, all reporting carriers.</p>
 
 <h2><span class="num">2</span>The physics of a turn</h2>
 <p>A turn absorbs an inbound delay as long as the aircraft still has its minimum turn time on the ground. The model is a hinge,</p>
-<pre>outbound_delay = a + beta * max(0, inbound_delay - (scheduled_turn - tau))</pre>
-<p>where <code>tau</code> is the <em>effective</em> minimum turn time (it includes crew, cleaning and boarding) and <code>beta</code> the pass-through rate beyond it. Fitted per carrier on $train_window by profiling <code>tau</code> over a 1-minute grid, with 95% CIs from a bootstrap that resamples whole days. The estimates are remarkably sharp: <code>tau</code> ranges from $tau_range minutes (regional carriers turn fastest) and <code>beta</code> from $beta_range: past the threshold, delay passes through one-for-one.</p>
+<pre>outbound_delay = a + β · max(0, inbound_delay − (scheduled_turn − τ))</pre>
+<p>where τ is the <em>effective</em> minimum turn time (it includes crew, cleaning and boarding) and β the pass-through rate beyond it. Fitted per carrier on $train_window by profiling τ over a 1-minute grid, with 95% CIs from a bootstrap that resamples whole days. τ ranges from $tau_range minutes and β from $beta_range: past the threshold, delay passes through about one-for-one. The held-out bins show a rounded knee rather than a sharp corner. τ intervals narrower than about a minute reflect the grid, not certainty to the second.</p>
 <div id="chart-hinge" class="chart tall"></div>
 <p class="caption">Dots: held-out months ($test_window), mean outbound delay in 5-minute bins of ground time left. Lines: hinge fitted on training months. Click legend entries to compare carriers.</p>
-<p>Out of sample, the hinge cuts the mean absolute error of outbound delay to $mae_hinge minutes, against $mae_linear for a linear model in inbound delay that ignores slack and $mae_constant for a constant; it beats the linear model for $hinge_wins carriers.</p>
+<p>Out of sample, the hinge predicts outbound delay with a mean absolute error of $mae_hinge minutes. Baselines fitted on the same training turns: a constant ($mae_constant), a linear model in inbound delay ($mae_linear), the same with the scheduled turn as a second regressor ($mae_linear_slack), and the hinge with τ pinned at zero ($mae_hinge_tau0). Slack only helps once it enters through the threshold. A gradient-boosted model on inbound delay, scheduled turn, carrier and hour does better, at $mae_gbm (better on $gbm_wins carriers with held-out data); the hinge keeps $hinge_share_of_gbm of its improvement over the slack-aware linear model with two interpretable parameters, and it keeps the decision model linear. $filter_excluded of held-out turns fall outside the delay window used for fitting and scoring (inbound −90 to 600, outbound −60 to 600 minutes).</p>
+<p><b>Is β causal?</b> Several carriers and hubs have β slightly above 1 with intervals that exclude 1. A turn cannot amplify delay, so this points to common shocks: weather or ATC at the station delays the inbound and the outbound's own departure together. The decision model reads β as the effect of slack; section 4 checks how much that matters.</p>
 <div class="table-wrap">$carrier_table</div>
 
 <h2><span class="num">3</span>Measuring the contagion</h2>
-<p>To count how much later delay one late departure creates, take <em>clean starts</em>: legs whose aircraft was ready (first leg of the chain, or inbound on time) but which still left late, so the delay is primary by construction. Sum the arrival delay of every later leg of that aircraft, and subtract the same sum for on-time clean starts of the same carrier, on the same day, in the same part of the day, with the same number of legs left to fly. Matching on the day removes weather and ATC conditions; matching on legs left removes exposure.</p>
+<p>To count how much later delay one late departure creates, take <em>clean starts</em>: legs whose aircraft was ready (first leg of the chain, or inbound on time) but which still left late. Sum the arrival delay of every later leg of that aircraft, and subtract the same sum for on-time clean starts of the same carrier, on the same day, in the same part of the day, with the same number of legs left to fly (capped at 4+). Matching on the day removes carrier-wide, day-level conditions, not local weather or a ground stop at one airport; matching on legs left removes exposure.</p>
 <div class="callout">Across $events delayed clean starts (15 minutes or more), each primary minute generates <b>$multiplier</b> $multiplier_ci further minutes of arrival delay later in the aircraft's day.</div>
 <div id="chart-contagion" class="chart"></div>
-<p class="caption">Extra downstream arrival delay against the primary delay, with 95% day-bootstrap intervals. Morning delays travel furthest: they have the most legs ahead of them.</p>
-<p>By carrier, the multiplier runs from $carrier_mult_low to $carrier_mult_high; Southwest, whose aircraft fly the most legs a day on the shortest turns, sits at $wn_multiplier.</p>
+<p class="caption">Extra downstream arrival delay against the primary delay, with 95% day-bootstrap intervals; dashed: one-for-one.</p>
+<p>Delays that start in the morning travel furthest, because more legs follow them: the multiplier is $mult_hour_5 at 5:00, peaks at $mult_hour_peak at $mult_hour_peak_at and falls to $mult_hour_21 for 21:00 departures.</p>
+<div id="chart-contagion-hour" class="chart"></div>
+<p class="caption">Multiplier by local departure hour of the delayed leg, 95% day-bootstrap band.</p>
+<h3>How robust is the $multiplier?</h3>
+<p>"Clean start" is an approximation of primary: $coded_share_events of these events still carry a late-aircraft cause code ($coded_share_min of their minutes), for instance after a tail swap. The headline survives every check below. Adding the origin airport to the match key (local weather, ground stops) leaves $mult_origin_events events and gives $mult_origin; exact legs left gives $mult_exact_legs; dropping late-aircraft-coded legs gives $mult_no_coded. Origin matching also explains the odd first bin: slips of 1 to 14 minutes look more contagious ($small_slip_mult) because they cluster at congested airports; matched within the airport they drop to $small_slip_origin. Legs left is counted on the realised chain, after cancellations and swaps the delay may itself cause, so it is partly a post-treatment quantity.</p>
+<div class="table-wrap">$robustness_table</div>
+<p>By carrier, the multiplier runs from $carrier_mult_low to $carrier_mult_high; $lp_carrier_name, whose aircraft fly $lp_carrier_legs_rank legs per aircraft-day ($lp_carrier_legs_per_day) on a median scheduled turn of $lp_carrier_median_turn minutes (shortest median: $shortest_median_turn), sits at $lp_carrier_multiplier.</p>
 <h3>Super-spreader airports</h3>
-<p>The multiplier depends on where the delay starts. The top of the ranking is $top_spreader at $top_spreader_multiplier, and the list is dominated by stations with short, tightly chained turns.</p>
+<p>Raw airport multipliers mostly reflect who flies there: the top of the raw ranking, $top_raw_spreader at $top_raw_multiplier, would score $top_raw_mix on its carrier mix alone. The ranking below compares each delayed start with its own carrier's network multiplier. On that measure the top three are $top_spreaders, at $top_spreaders_range downstream minutes per primary minute above their carrier mix; $top_spreaders_ci_note.</p>
 <div id="chart-map" class="chart tall"></div>
-<p class="caption">Airports with at least $min_events delayed clean starts. Colour: multiplier; size: primary minutes generated there. Hover for intervals.</p>
+<p class="caption">Airports with at least $min_events delayed clean starts. Colour: multiplier above (teal) or below (amber) the carrier-mix expectation; size: primary minutes generated there. Hover for intervals.</p>
 
 <h2><span class="num">4</span>Where to put the buffer</h2>
-<p>Padding turns costs aircraft time, so the question is where a limited budget does the most good. For Southwest ($turns_per_day turns a day), a decision is an extra number of scheduled minutes for every turn at a station in a given departure hour ($cells station-hour cells). The delay recursion along every aircraft chain uses the fitted <code>tau</code> and <code>beta</code>, with primary delays and en-route changes taken from the data, so that zero buffer replays each observed day exactly. A sample-average-approximation LP over $scenario_days training days chooses the buffers that minimise expected arrival delay under a daily budget ($lp_size, solved with HiGHS). Policies are then scored on $test_days held-out days.</p>
-<div id="chart-frontier" class="chart tall"></div>
-<p class="caption">Delay avoided on held-out days against the buffer actually scheduled on those days. Bands: 95% day-bootstrap CI.</p>
-<div class="callout">With $budget buffer minutes a day, the LP avoids <b>$lp_avoided</b> $lp_avoided_ci minutes of arrival delay per held-out day, against $uniform_avoided for uniform padding and $greedy_avoided for padding the most-delayed turns (paired difference to uniform: $greedy_gain $greedy_gain_ci). That is $lp_per_min minutes avoided per buffer minute, against $uniform_per_min and $greedy_per_min. Paired over days, the LP's edge over uniform is $lp_gain $lp_gain_ci minutes per day.</div>
-<h3>Does the LP overfit its scenarios?</h3>
-<p>An LP fitted on a handful of days learns their noise. Re-solving on independent random draws of 10 to 90 training days shows the classic sample-average-approximation pattern: the in-sample edge over uniform padding shrinks from $size_train_small to $size_train_large as scenarios are added, while the held-out edge rises from $size_test_small to $size_test_large. With 10 days the LP chases those days' particular disruptions; with 90 it learns where turns are structurally too tight for the delay that reaches them.</p>
+<p>Padding turns costs aircraft time, so the question is where a limited budget does the most good. For $lp_carrier_name ($turns_per_day turns a day in training), a decision is an extra number of scheduled minutes for every turn at a station in a given departure hour ($cells station-hour cells). The delay recursion along every aircraft chain uses the fitted τ and β, with primary delays and en-route changes taken from the data, so that zero buffer replays each observed day exactly. A sample-average-approximation LP over all $scenario_days training days chooses the buffers that minimise expected arrival delay under a daily budget ($lp_size, solved with HiGHS). Policies are then scored on $test_days held-out days (the chart at the top).</p>
+<p><b>What "delay avoided" means.</b> Arrival delay is measured against the padded published schedule, the DOT on-time definition airlines are judged on. A buffer never makes an aircraft earlier on the clock: it moves that departure and every later one of the aircraft's day back in the timetable, and absorbs the late inbound inside that slack. Because the shift carries down the chain, the same buffer minutes count as avoided on each later leg that would have been late, which is how one buffer minute can avoid more than one minute of delay. Padding buys predictability, not speed.</p>
+<div class="callout">The budget is set on training-day traffic; summer days fly more turns ($turns_per_day_test a day), so at a $budget min/day budget the LP spends $lp_spend and uniform padding $uniform_spend min/day on held-out days. Per buffer minute, LP-placed buffer avoids <b>$lp_per_min</b> minutes of arrival delay against $uniform_per_min for uniform padding: <b>$lp_vs_uniform as much</b>. In total the LP avoids $lp_avoided $lp_avoided_ci minutes per held-out day, $lp_share_of_baseline of the $baseline_delay delay minutes of an average held-out day; uniform padding interpolated at the same spend would avoid $uniform_at_lp_spend.</div>
+<p>Two heuristics show how much of that needs an optimiser. Padding the turns with the most observed propagated delay does worse than uniform padding ($greedy_per_min per buffer minute; paired difference to uniform $greedy_gain $greedy_gain_ci min/day): those turns are late because their inbound is late, not because their slack is short. A marginal-value greedy that ranks cells by the delay a full buffer would remove there, one cell at a time, gets much closer: $marginal_per_min per buffer minute, so the LP's joint placement adds a further $lp_vs_marginal_pct per buffer minute. Rounding the LP's buffers to 5-minute schedule steps costs little ($rounded_per_min per buffer minute at $rounded_spend min/day). Fractional uniform padding is $uniform_seconds seconds per turn, which no planner would publish; its implementable version, 5 minutes on randomly chosen station-hours, gets $uniform_step_per_min.</p>
+<div class="table-wrap">$policy_table</div>
+<p class="caption">Budget $budget min/day, $test_days held-out days. On time (A15): share of arrivals less than 15 minutes late against the padded schedule ($ontime_base with no buffer). Clock lateness: change in positive lateness against the original timetable (baseline $clock_base min/day).</p>
+<p>On the clock, every policy makes the day later, by a similar amount ($clock_lp min/day for the LP, $clock_uniform for uniform padding): the LP does not create time, it places it where it stops the most knock-on delay. On the A15 count it is not the best policy either ($ontime_lp on time against $ontime_uniform for fractional uniform padding): it minimises delay minutes, so it spends buffer on the long cascades. Most of fractional uniform padding's A15 edge is a threshold artefact: a fraction of a minute on every turn moves arrivals of exactly 15 minutes under the line, and the 5-minute version scores $ontime_uniform_step. An airline that cares about the A15 count should optimise that objective instead.</p>
+<h3>Does the evaluation flatter the LP?</h3>
+<p>The held-out replay uses the same hinge the LP optimised against: out of sample in days, but in-model. Re-scoring the same buffers with the replay's τ shifted by ±5 and ±10 minutes, or with β = 0.8, moves the absolute minutes a lot ($sens_lp_range min/day for the LP) but keeps its per-minute advantage over uniform padding in the range $sens_ratio_range. The ranking is robust; the absolute numbers depend on the model.</p>
+<div class="table-wrap">$sensitivity_table</div>
+<h3>How many scenario days?</h3>
+<p>An LP fitted on a handful of days learns their noise. Re-solving on random draws of $size_small to $size_full training days, the in-sample edge over uniform padding shrinks from $size_train_small to $size_train_large while the held-out edge rises from $size_test_small to $size_test_large ($size_test_90 at 90 days, $size_test_prev at $size_prev): beyond about 90 days it levels off. The two curves are not a convergence test: the held-out months are summer and busier than the average training day.</p>
 <div id="chart-sizes" class="chart"></div>
-<p class="caption">Budget $budget min/day. Faint dots: individual draws; lines: mean over draws.</p>
+<p class="caption">Budget $budget min/day. Faint dots: individual draws (3 per size; the full set is one draw); lines: mean over draws.</p>
 <h3>Where the buffer goes</h3>
-<p>The LP concentrates the budget on $lp_cells of $cells cells. The largest allocations:</p>
+<p>The LP concentrates the budget on $lp_cells of $cells cells, listed by buffer minutes per day. It does not follow the super-spreader ranking: that ranking measures how far a delay that starts at an airport travels, while the LP looks for turns whose scheduled slack is short relative to τ and to the inbound delay that typically reaches them, with many legs behind them. The last column shows what each cell would be worth padded on its own.</p>
 <div class="table-wrap">$allocation_table</div>
 
 <h2><span class="num">5</span>Method notes and limitations</h2>
 <ul>
-  <li><b>Clock.</b> BTS times are local. Every leg is converted to UTC with its airport's IANA zone; the arrival date is resolved against the published block time, which handles overnight, date-line and DST legs (tested on hand-made cases).</li>
-  <li><b>Time split.</b> Parameters, LP buffers and heuristic rankings use $train_window only; every performance number is on $test_window.</li>
-  <li><b>Contagion is observational.</b> The matched comparison removes day-level conditions and exposure, not aircraft-level confounders. For delays under 15 minutes the estimate is noticeably higher, a sign that small slips also flag tighter schedules.</li>
-  <li><b>Buffer model.</b> A buffer minute is modelled as slack only: it does not change primary delays, crew legality, gate conflicts or the published schedule's commercial value. The LP is a ranking device for where slack pays, not a full schedule re-optimisation.</li>
-  <li><b>Coverage.</b> Chains break at cancellations, diversions, tail swaps and ground times over 5 hours. Hawaiian reports under Alaska from January 2026 and Spirit stops reporting in May 2026.</li>
+  <li><b>Clock.</b> BTS times are local. Every leg is converted to UTC with its airport's IANA zone (first occurrence in the repeated fall-back hour); the arrival date is resolved against the published block time, which handles overnight, date-line and DST legs (tested on hand-made cases).</li>
+  <li><b>Time split.</b> Parameters, hubs, LP buffers and heuristic rankings use $train_window only; every performance number is on $test_window.</li>
+  <li><b>Contagion is observational.</b> The matched comparison removes carrier-wide day-level conditions and exposure, not aircraft-level confounders; the robustness table shows how far the estimate moves under stricter matching.</li>
+  <li><b>Buffer model.</b> A buffer minute is modelled as slack only: it does not change primary delays, crew legality, gate conflicts or the commercial value of a departure time. The LP is a ranking device for where slack pays, not a full schedule re-optimisation; a budget-neutral re-allocation of existing slack would be needed to gain clock time.</li>
+  <li><b>Uncertainty.</b> CIs on held-out policy results resample whole weeks; hinge and contagion CIs resample days. All are conditional on the model.</li>
+  <li><b>Coverage.</b> Chains break at cancellations, diversions, tail swaps and ground times over 5 hours. $carriers_without_test reports under Alaska from January 2026 (no held-out turns; $n_carriers_test carriers are scored) and Spirit stops reporting in May 2026 ($spirit_test_turns held-out turns).</li>
 </ul>
 
 <footer>
-  Built by <a href="https://github.com/Pchambet">Pierre Chambet</a>, decision science for operations under uncertainty. Data: US DOT Bureau of Transportation Statistics, Reporting Carrier On-Time Performance (public domain). <a href="$repo">Source</a>.
+  Built by <a href="https://github.com/Pchambet">Pierre Chambet</a>, decision science for operations under uncertainty. Data: <a href="https://www.transtats.bts.gov/">US DOT Bureau of Transportation Statistics, Reporting Carrier On-Time Performance</a> (public domain). <a href="$repo">Code</a>.
 </footer>
 </main>
 <script>
@@ -139,6 +156,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const ink = dark ? "#e2e8f0" : "#0f172a";
   const grid = dark ? "#1e293b" : "#e2e8f0";
   const muted = dark ? "#94a3b8" : "#64748b";
+  const narrow = window.matchMedia("(max-width: 600px)").matches;
   function axis(a) {
     return Object.assign({ gridcolor: grid, zeroline: false, linecolor: muted, tickcolor: muted, automargin: true }, a || {});
   }
@@ -152,13 +170,40 @@ document.addEventListener("DOMContentLoaded", function () {
       margin: { l: 60, r: 16, t: 30, b: 56 }, showlegend: false, hovermode: "closest",
       hoverlabel: { font: { family: "Inter, sans-serif" } }
     }, spec.layout);
+    lay.margin = Object.assign({ l: 60, r: 16, t: 30, b: 56 }, spec.layout.margin || {});
     lay.xaxis = axis(spec.layout.xaxis);
     lay.yaxis = axis(spec.layout.yaxis);
+    let data = spec.data;
+    if (narrow) {
+      // Phones: short axis titles, legend under the plot, only the visible series listed.
+      if (spec.short) {
+        lay.xaxis.title = { text: spec.short.x };
+        lay.yaxis.title = { text: spec.short.y };
+      }
+      if (lay.showlegend) {
+        lay.legend = { orientation: "h", x: 0, xanchor: "left", y: -0.3, yanchor: "top", font: { size: 11 } };
+        lay.margin = Object.assign({}, lay.margin, { b: 120 });
+        data = data.map(function (t) { return t.visible === "legendonly" ? Object.assign({}, t, { showlegend: false }) : t; });
+      }
+      if (!lay.geo) lay.margin = Object.assign({}, lay.margin, { l: 52, r: 8 });
+      // Map: colorbar under the map instead of a third of the width.
+      if (lay.geo) {
+        data = data.map(function (t) {
+          if (!t.marker || !t.marker.colorbar) return t;
+          const cb = Object.assign({}, t.marker.colorbar, { orientation: "h", x: 0.5, xanchor: "center", y: -0.02, yanchor: "top", len: 0.8, thickness: 10 });
+          return Object.assign({}, t, { marker: Object.assign({}, t.marker, { colorbar: cb }) });
+        });
+        lay.margin = Object.assign({}, lay.margin, { b: 60 });
+      }
+    } else if (spec.wide_legend) {
+      lay.legend = spec.wide_legend;
+      lay.margin = Object.assign({}, lay.margin, { r: 200 });
+    }
     if (lay.geo) {
       lay.geo.landcolor = dark ? "#1e293b" : "#f1f5f9";
       lay.geo.subunitcolor = dark ? "#334155" : "#cbd5e1";
     }
-    Plotly.newPlot(el, spec.data, lay, { responsive: true, displaylogo: false, modeBarButtonsToRemove: ["lasso2d", "select2d"] });
+    Plotly.newPlot(el, data, lay, { responsive: true, displaylogo: false, modeBarButtonsToRemove: ["lasso2d", "select2d"] });
   });
 });
 </script>

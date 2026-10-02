@@ -3,24 +3,38 @@ rotation chaining. Expected values are worked out by hand in the comments."""
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 
 import pytest
 
+from delay_contagion.paths import ROOT
 from delay_contagion.warehouse import connect, run_dbt
 
 TOY = Path(__file__).parent / "fixtures" / "toy_schedule.csv"
 
 
 @pytest.fixture(scope="module")
-def con(tmp_path_factory):
+def built(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("dbt")
-    warehouse = tmp / "toy.duckdb"
-    run_dbt(["build"], flights=TOY, warehouse=warehouse, artifacts_dir=tmp)
-    c = connect(warehouse)
+    run_dbt(["build"], flights=TOY, warehouse=tmp / "toy.duckdb", artifacts_dir=tmp)
+    return tmp
+
+
+@pytest.fixture(scope="module")
+def con(built):
+    c = connect(built / "toy.duckdb")
     yield c
     c.close()
+
+
+def test_readme_counts_the_dbt_tests(built):
+    nodes = json.loads((built / "target" / "manifest.json").read_text())["nodes"].values()
+    tests = [n for n in nodes if n["resource_type"] == "test"]
+    generic = sum(1 for n in tests if n.get("test_metadata"))
+    phrase = f"{generic} schema tests and {len(tests) - generic} singular tests"
+    assert phrase in (ROOT / "README.md").read_text()
 
 
 def _utc(con, flight_number: int) -> tuple[datetime, datetime]:

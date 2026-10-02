@@ -54,6 +54,17 @@ def cmd_report(args: argparse.Namespace) -> None:
     from delay_contagion import report
 
     print(f"  {report.render().relative_to(paths.ROOT)}")
+    print(f"  {report.render_readme().relative_to(paths.ROOT)}")
+
+
+def cmd_docs(args: argparse.Namespace) -> None:
+    from delay_contagion.warehouse import run_dbt
+
+    run_dbt(
+        ["docs", "generate"], flights=paths.FIXTURE_FLIGHTS, warehouse=paths.DATA / "fixture.duckdb"
+    )
+    print(f"dbt docs in {paths.DBT_DIR / 'target'}; browse them with:")
+    print("  uv run dbt docs serve --project-dir dbt --profiles-dir dbt")
 
 
 def cmd_fixture(args: argparse.Namespace) -> None:
@@ -78,8 +89,11 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("figures", help="render docs/figures from results/").set_defaults(
         func=cmd_figures
     )
-    sub.add_parser("report", help="render site/index.html from results/").set_defaults(
-        func=cmd_report
+    sub.add_parser(
+        "report", help="render site/index.html and README.md from results/"
+    ).set_defaults(func=cmd_report)
+    sub.add_parser("docs", help="dbt docs (lineage) on the fixture warehouse").set_defaults(
+        func=cmd_docs
     )
     sub.add_parser("fixture", help="regenerate the CI fixture from the warehouse").set_defaults(
         func=cmd_fixture

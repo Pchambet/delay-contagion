@@ -16,13 +16,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from delay_contagion.descriptive import CARRIER_NAMES
 from delay_contagion.paths import FIGURES, RESULTS
 
 INK, TEAL, AMBER, SLATE, GRID = "#0f172a", "#0d9488", "#d97706", "#64748b", "#e2e8f0"
-POLICY_COLORS = {"LP-optimised": TEAL, "Greedy": AMBER, "Uniform": SLATE}
+INDIGO = "#4f46e5"
+POLICY_COLORS = {"LP-optimised": TEAL, "Marginal greedy": INDIGO, "Greedy": AMBER,
+                 "Uniform": SLATE}  # fmt: skip
 POLICY_LABELS = {
     "LP-optimised": "LP-optimised",
-    "Greedy": "Greedy: pad the most-delayed turns",
+    "Marginal greedy": "Marginal-value greedy",
+    "Greedy": "Greedy (most-delayed turns)",
     "Uniform": "Uniform padding",
 }
 
@@ -81,43 +85,51 @@ def hero_frontier() -> Path:
     lp, uni = ref["LP-optimised"], ref["Uniform"]
     test = s["propagation"]["test_months"]
     df = pd.read_csv(RESULTS / "buffer_frontier.csv")
+    df = df[df.policy.isin(list(POLICY_COLORS))]
 
     fig, ax = plt.subplots(figsize=(9, 5.4))
-    for policy in ["Uniform", "Greedy", "LP-optimised"]:
+    for policy in ["Uniform", "Greedy", "Marginal greedy", "LP-optimised"]:
         d = df[df.policy == policy].sort_values("budget")
         c = POLICY_COLORS[policy]
+        main = policy == "LP-optimised"
         ax.fill_between(d.buffer_test, d.avoided_test_lo, d.avoided_test_hi, color=c, alpha=0.15,
                         lw=0)  # fmt: skip
-        ax.plot(d.buffer_test, d.avoided_test, color=c, lw=2.4 if policy == "LP-optimised" else 1.8,
-                marker="o", ms=3.5)  # fmt: skip
+        ax.plot(d.buffer_test, d.avoided_test, color=c, lw=2.4 if main else 1.8, marker="o",
+                ms=3.5)  # fmt: skip
         last = d.iloc[-1]
-        ax.annotate(POLICY_LABELS[policy], (last.buffer_test, last.avoided_test), xytext=(6, 0),
+        # Uniform and greedy end close together: nudge their labels apart.
+        dy = {"Uniform": 6, "Greedy": -6}.get(policy, 0)
+        ax.annotate(POLICY_LABELS[policy], (last.buffer_test, last.avoided_test), xytext=(6, dy),
                     textcoords="offset points", color=c, fontsize=9.5, va="center",
-                    fontweight="bold" if policy == "LP-optimised" else "normal")  # fmt: skip
-    ratio = lp["avoided_test"] / uni["avoided_test"]
+                    fontweight="bold" if main else "normal")  # fmt: skip
+    ratio = lp["avoided_per_buffer_min"] / uni["avoided_per_buffer_min"]
     ax.scatter([lp["buffer_test"]], [lp["avoided_test"]], s=90, facecolor="none",
                edgecolor=INK, lw=1.2, zorder=4)  # fmt: skip
+    share = lp["avoided_test"] / buf["baseline_delay_per_day_test"]
     ax.annotate(
-        f"{lp['avoided_test']:,.0f} min/day avoided\n"
-        f"vs {uni['avoided_test']:,.0f} for uniform ({ratio:.1f}×)\n"
-        f"at a {buf['reference_budget']:,.0f} min/day budget",
+        f"Budget {buf['reference_budget']:,.0f} min/day on training traffic = "
+        f"{lp['buffer_test']:,.0f} min/day\nscheduled on the busier held-out days. "
+        f"LP: {lp['avoided_test']:,.0f} min/day avoided\n({share:.1%} of held-out arrival delay), "
+        f"{lp['avoided_per_buffer_min']:.2f} per buffer minute vs "
+        f"{uni['avoided_per_buffer_min']:.2f} for uniform",
         (lp["buffer_test"], lp["avoided_test"]),
-        xytext=(df.buffer_test.max() * 0.03, df.avoided_test.max() * 0.78),
+        xytext=(df.buffer_test.max() * 0.03, df.avoided_test.max() * 0.80),
         textcoords="data",
         fontsize=9,
         color=INK,
         arrowprops={"arrowstyle": "-", "color": SLATE, "lw": 0.8},
     )
     ax.set_xlabel("Extra scheduled turn time on held-out days (minutes per day, network-wide)")
-    ax.set_ylabel("Arrival delay avoided (minutes per day)")
-    ax.set_xlim(0, df.buffer_test.max() * 1.32)
+    ax.set_ylabel("Arrival delay avoided vs padded schedule (min/day)")
+    ax.set_xlim(0, df.buffer_test.max() * 1.27)
     ax.set_ylim(0, None)
-    ax.set_title(f"Placed by the LP, buffer removes {ratio:.1f}× more delay than uniform padding")
+    ax.set_title(f"Placed by an LP, a buffer minute avoids {ratio:.1f}× as much delay as "
+                 "uniform padding")  # fmt: skip
     _subtitle(
         ax,
-        f"Southwest Airlines, {buf['test_days']} held-out days "
-        f"({_month_label(test[0])} to {_month_label(test[-1])}); buffers chosen on "
-        f"{buf['scenario_days']} training days. Bands: 95% day-bootstrap CI.",
+        f"{CARRIER_NAMES.get(buf['carrier'], buf['carrier'])}, {buf['test_days']} held-out days "
+        f"({_month_label(test[0])} to {_month_label(test[-1])}), buffers set on "
+        f"{buf['scenario_days']} training days. Delay vs padded schedule; 95% week-block CIs.",
     )
     return _save(fig, "hero_frontier.png")
 
@@ -161,7 +173,6 @@ def reactionary_by_hour() -> Path:
 def hinge_fit(carriers: tuple[str, ...] = ("WN", "DL", "OO")) -> Path:
     params = pd.read_csv(RESULTS / "hinge_carriers.csv").set_index("group")
     binned = pd.read_csv(RESULTS / "hinge_binned_test.csv")
-    names = {"WN": "Southwest", "DL": "Delta", "OO": "SkyWest", "AA": "American", "UA": "United"}
     colors = [TEAL, AMBER, SLATE]
     fig, ax = plt.subplots(figsize=(9, 5))
     g = np.linspace(-60, 150, 400)
@@ -173,7 +184,7 @@ def hinge_fit(carriers: tuple[str, ...] = ("WN", "DL", "OO")) -> Path:
         ax.text(
             0.98,
             0.95 - 0.075 * list(carriers).index(c),
-            f"{names.get(c, c)}:  τ = {p.tau:.0f} min [{p.tau_lo:.0f}, {p.tau_hi:.0f}],  "
+            f"{CARRIER_NAMES.get(c, c)}:  τ = {p.tau:.0f} min [{p.tau_lo:.0f}, {p.tau_hi:.0f}],  "
             f"β = {p.beta:.2f}",
             transform=ax.transAxes,
             ha="right",
@@ -184,13 +195,12 @@ def hinge_fit(carriers: tuple[str, ...] = ("WN", "DL", "OO")) -> Path:
     ax.set_xlabel("Ground time left = scheduled turn - inbound arrival delay (min)")
     ax.set_ylabel("Mean outbound departure delay (min)")
     ax.set_ylim(-10, None)
-    wn = params.loc[carriers[0]]
     ax.set_title(
-        f"Below ~{wn.tau:.0f} min of ground time left, inbound delay passes through "
-        f"one-for-one (β = {wn.beta:.2f})"
+        f"Past a carrier-specific minimum turn time ({params.tau.min():.0f} to "
+        f"{params.tau.max():.0f} min), inbound delay passes through about one-for-one"
     )
     _subtitle(ax, "Dots: held-out (summer) months, 5-min bins. Lines: hinge fitted on training "
-                  "months. τ = effective minimum turn time, 95% CI in brackets.")  # fmt: skip
+                  "months. τ = effective minimum turn time (95% CI), β = pass-through rate (β ≈ 1).")  # fmt: skip
     return _save(fig, "hinge_fit.png")
 
 
@@ -238,23 +248,31 @@ def contagion_curve() -> Path:
 
 
 def superspreaders(top: int = 15) -> Path:
+    """Airports ranked by the multiplier left after their carrier mix is accounted for."""
     df = pd.read_csv(RESULTS / "superspreaders.csv").head(top).iloc[::-1]
-    o = _summary()["contagion"]["overall"]
     fig, ax = plt.subplots(figsize=(8, 5.6))
     y = np.arange(len(df))
-    ax.hlines(y, df.multiplier_lo, df.multiplier_hi, color=TEAL, lw=2, alpha=0.45)
-    ax.scatter(df.multiplier, y, color=TEAL, s=30, zorder=3)
-    ax.axvline(o["multiplier"], color=SLATE, lw=1, ls="--")
-    ax.annotate(f"network {o['multiplier']:.2f}", (o["multiplier"], len(df) - 0.5),
-                xytext=(4, 0), textcoords="offset points", color=SLATE, fontsize=8.5)  # fmt: skip
-    ax.set_yticks(y, [f"{r.origin}  {r.city}" for r in df.itertuples()])
+    ax.hlines(y, df.excess_over_mix_lo, df.excess_over_mix_hi, color=TEAL, lw=2, alpha=0.45)
+    ax.scatter(df.excess_over_mix, y, color=TEAL, s=30, zorder=3)
+    ax.axvline(0, color=SLATE, lw=1, ls="--")
+    ax.annotate("carrier-mix\nexpectation", (0, -0.4), xytext=(-4, 0),
+                textcoords="offset points", color=SLATE, fontsize=8.5, ha="right")  # fmt: skip
+    ax.set_yticks(y, [f"{r.origin}  {r.city}  (raw {r.multiplier:.2f})" for r in df.itertuples()])
     ax.grid(axis="y", visible=False)
-    ax.set_xlabel("Downstream delay minutes per primary minute (95% CI)")
-    first = df.iloc[-1]
-    ax.set_title(f"Super-spreaders: each primary minute at {first.origin} adds "
-                 f"{first.multiplier:.2f} minutes downstream (network: {o['multiplier']:.2f})")  # fmt: skip
+    ax.set_xlabel(
+        "Downstream minutes per primary minute, above the carrier-mix expectation (95% CI)"
+    )
+    ranked = df.iloc[::-1]
+    lead = ranked.head(3)
+    overlap = ranked.iloc[0].excess_over_mix_lo <= ranked.iloc[1].excess_over_mix_hi
+    ax.set_title(
+        f"Beyond their airlines' average, {', '.join(lead.origin.iloc[:-1])} and "
+        f"{lead.origin.iloc[-1]} add the most contagion"
+        + (" (overlapping intervals)" if overlap else "")
+    )
     min_events = _summary()["config"]["min_events_airport"]
-    _subtitle(ax, f"Airports with at least {min_events:,} delayed clean starts in 12 months.")
+    _subtitle(ax, f"Airports with at least {min_events:,} delayed clean starts in 12 months. "
+                  "Expectation = each event's carrier multiplier; raw multiplier in brackets.")  # fmt: skip
     return _save(fig, "superspreaders.png")
 
 
@@ -279,12 +297,12 @@ def scenario_sizes() -> Path:
     ax.set_ylabel("Extra delay avoided vs uniform padding")
     last = mean.iloc[-1]
     ax.set_title(
-        f"More scenario days: in-sample optimism falls, the held-out edge rises to "
-        f"{last.gain_test:.0%}"
+        f"More scenario days: in-sample optimism falls, the held-out edge reaches "
+        f"{last.gain_test:.0%} with all {last.scenario_days:.0f} training days"
     )
     n_rep = df.replicate.nunique()
     _subtitle(ax, f"Budget {ref:.0f} buffer minutes per day. Dots: {n_rep} independent draws of "
-                  "training days per size; lines: mean.")  # fmt: skip
+                  "training days per size (the full set is one draw); lines: mean.")  # fmt: skip
     return _save(fig, "scenario_sizes.png")
 
 

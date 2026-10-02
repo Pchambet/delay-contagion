@@ -1,4 +1,4 @@
-.PHONY: setup data build run figures report fixture dbt-fixture test lint format all clean
+.PHONY: setup data build run figures report fixture dbt-fixture docs test lint format all clean
 
 RUN := uv run delay-contagion
 
@@ -18,7 +18,7 @@ run: build        ## full pipeline: dbt build, models, LP, result tables, figure
 figures:          ## re-render figures from results/
 	$(RUN) figures
 
-report:           ## render site/index.html from results/
+report:           ## render site/index.html and README.md from results/
 	$(RUN) report
 
 fixture:          ## regenerate the committed CI fixture from the warehouse
@@ -27,12 +27,16 @@ fixture:          ## regenerate the committed CI fixture from the warehouse
 dbt-fixture:      ## dbt build on the committed fixture (what CI runs)
 	$(RUN) build --fixture
 
+docs: dbt-fixture ## dbt docs site (model lineage) on the fixture warehouse
+	$(RUN) docs
+
 test:
 	uv run pytest -q
 
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
+	uv run mypy
 
 format:
 	uv run ruff format .
