@@ -23,6 +23,8 @@ How a late flight infects the rest of the day through aircraft rotations, and wh
 
 Most airline punctuality work forecasts the delay of one flight. Operations teams fight something else: one late aircraft drags its whole rotation, and schedule slack is the cheapest vaccine they control. Padding every turn is expensive (aircraft time is the scarcest resource an airline has); padding nothing makes the network fragile. The decision is *where* a few hundred minutes of slack buy the most punctuality, and that needs three things measured properly: how much delay is contagious, how a turn transmits it, and how a limited budget should be spread.
 
+Buffer time is one lever against disruption; spare aircraft are the other, and sizing them is what [SmartFleetOptim](https://smartfleetoptim.com/) does.
+
 ## Approach
 
 ```mermaid
